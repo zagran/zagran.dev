@@ -43,7 +43,7 @@ variable "price_class" {
   validation {
     condition = contains([
       "PriceClass_All",
-      "PriceClass_200", 
+      "PriceClass_200",
       "PriceClass_100"
     ], var.price_class)
     error_message = "Price class must be PriceClass_All, PriceClass_200, or PriceClass_100."

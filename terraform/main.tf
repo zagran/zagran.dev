@@ -1,5 +1,14 @@
 terraform {
   required_version = ">= 1.0"
+
+  # S3-only remote state backend (no DynamoDB locking)
+  backend "s3" {
+    bucket  = "zagran-terraform-state"
+    key     = "business-card/terraform.tfstate"
+    region  = "us-east-1"
+    encrypt = true
+  }
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -10,7 +19,21 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
-  
+
+  default_tags {
+    tags = {
+      Project     = var.project_name
+      Environment = var.environment
+      ManagedBy   = "Terraform"
+    }
+  }
+}
+
+# Additional AWS provider for us-east-1 (required for ACM with CloudFront)
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+
   default_tags {
     tags = {
       Project     = var.project_name
@@ -48,15 +71,6 @@ resource "aws_s3_bucket_website_configuration" "website_config" {
   error_document {
     key = "error.html"
   }
-
-  routing_rule {
-    condition {
-      key_prefix_equals = "docs/"
-    }
-    redirect {
-      replace_key_prefix_with = "documents/"
-    }
-  }
 }
 
 # S3 Bucket Public Access Block (keep private for CloudFront)
@@ -72,7 +86,7 @@ resource "aws_s3_bucket_public_access_block" "website_pab" {
 # CloudFront Origin Access Control
 resource "aws_cloudfront_origin_access_control" "website_oac" {
   count = var.enable_cloudfront ? 1 : 0
-  
+
   name                              = "${var.domain_name}-oac"
   description                       = "OAC for ${var.domain_name}"
   origin_access_control_origin_type = "s3"
@@ -82,10 +96,10 @@ resource "aws_cloudfront_origin_access_control" "website_oac" {
 
 # ACM Certificate (must be in us-east-1 for CloudFront)
 resource "aws_acm_certificate" "website_cert" {
-  provider          = aws.us_east_1
-  domain_name       = var.domain_name
+  provider                  = aws.us_east_1
+  domain_name               = var.domain_name
   subject_alternative_names = ["www.${var.domain_name}"]
-  validation_method = "DNS"
+  validation_method         = "DNS"
 
   lifecycle {
     create_before_destroy = true
@@ -93,20 +107,6 @@ resource "aws_acm_certificate" "website_cert" {
 
   tags = {
     Name = "${var.domain_name} Certificate"
-  }
-}
-
-# Additional AWS provider for us-east-1 (required for ACM with CloudFront)
-provider "aws" {
-  alias  = "us_east_1"
-  region = "us-east-1"
-  
-  default_tags {
-    tags = {
-      Project     = var.project_name
-      Environment = var.environment
-      ManagedBy   = "Terraform"
-    }
   }
 }
 
@@ -143,7 +143,7 @@ resource "aws_acm_certificate_validation" "website_cert_validation" {
   provider                = aws.us_east_1
   certificate_arn         = aws_acm_certificate.website_cert.arn
   validation_record_fqdns = var.create_route53_zone ? [for record in aws_route53_record.website_cert_validation : record.fqdn] : null
-  
+
   # If not using Route53, certificate validation will need to be done manually
   count = var.create_route53_zone ? 1 : 0
 
@@ -249,8 +249,8 @@ resource "aws_s3_bucket_policy" "website_policy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "AllowCloudFrontServicePrincipal"
-        Effect    = "Allow"
+        Sid    = "AllowCloudFrontServicePrincipal"
+        Effect = "Allow"
         Principal = {
           Service = "cloudfront.amazonaws.com"
         }
