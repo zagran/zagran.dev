@@ -55,8 +55,13 @@ jobs:
         node-version: '20'
 
     - name: Install dependencies
-      run: npm ci
-      working-directory: ./react-app
+      run: |
+        if [ -d ./react-app ]; then
+          npm ci
+        else
+          echo "Directory ./react-app does not exist" && exit 1
+        fi
+      working-directory: ./
 
     - name: Build React app
       run: npm run build
