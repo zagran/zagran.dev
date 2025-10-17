@@ -224,16 +224,18 @@ resource "aws_cloudfront_distribution" "website_distribution" {
     minimum_protocol_version = "TLSv1.2_2021"
   }
 
+  # Return index.html for 404s so React Router can handle client-side routing
   custom_error_response {
     error_code         = 404
-    response_code      = 404
-    response_page_path = "/error.html"
+    response_code      = 200
+    response_page_path = "/index.html"
   }
 
+  # S3 returns 403 for missing files when using OAC, treat as 404
   custom_error_response {
     error_code         = 403
-    response_code      = 404
-    response_page_path = "/error.html"
+    response_code      = 200
+    response_page_path = "/index.html"
   }
 
   tags = {
