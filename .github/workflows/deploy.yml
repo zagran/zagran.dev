@@ -55,17 +55,10 @@ jobs:
         node-version: '20'
 
     - name: Install dependencies
-      run: |
-        if [ -d ./react-app ]; then
-          npm ci
-        else
-          echo "Directory ./react-app does not exist" && exit 1
-        fi
-      working-directory: ./
+      run: npm ci
 
     - name: Build React app
       run: npm run build
-      working-directory: ./react-app
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
@@ -97,11 +90,11 @@ jobs:
 
     - name: Deploy React build to S3
       run: |
-        aws s3 sync ./react-app/build s3://${{ steps.tf-outputs.outputs.s3_bucket_name }} \
+        aws s3 sync ./build s3://${{ steps.tf-outputs.outputs.s3_bucket_name }} \
           --delete \
           --cache-control "max-age=31536000" \
           --exclude "*.html"
-        aws s3 sync ./react-app/build s3://${{ steps.tf-outputs.outputs.s3_bucket_name }} \
+        aws s3 sync ./build s3://${{ steps.tf-outputs.outputs.s3_bucket_name }} \
           --exclude "*" \
           --include "*.html" \
           --cache-control "max-age=0,no-cache,no-store,must-revalidate"
