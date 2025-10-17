@@ -60,6 +60,27 @@ jobs:
     - name: Build React app
       run: npm run build
 
+    - name: Check build output
+      run: |
+        echo "=== Checking for build output ==="
+        if [ -d "./build" ]; then
+          echo "✅ Found 'build' directory"
+          echo "Contents:"
+          ls -la ./build
+        elif [ -d "./dist" ]; then
+          echo "✅ Found 'dist' directory"
+          echo "Contents:"
+          ls -la ./dist
+          echo "BUILD_DIR=dist" >> $GITHUB_ENV
+        else
+          echo "❌ No build output found!"
+          echo "=== Current directory structure ==="
+          ls -la
+          echo "=== Checking package.json build script ==="
+          cat package.json | grep -A2 -B2 "build"
+          exit 1
+        fi
+
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
       with:
@@ -90,11 +111,15 @@ jobs:
 
     - name: Deploy React build to S3
       run: |
-        aws s3 sync ./build s3://${{ steps.tf-outputs.outputs.s3_bucket_name }} \
+        # Use BUILD_DIR env var if set, otherwise default to 'build'
+        BUILD_OUTPUT="${BUILD_DIR:-build}"
+        echo "Deploying from ./${BUILD_OUTPUT} directory"
+        
+        aws s3 sync ./${BUILD_OUTPUT} s3://${{ steps.tf-outputs.outputs.s3_bucket_name }} \
           --delete \
           --cache-control "max-age=31536000" \
           --exclude "*.html"
-        aws s3 sync ./build s3://${{ steps.tf-outputs.outputs.s3_bucket_name }} \
+        aws s3 sync ./${BUILD_OUTPUT} s3://${{ steps.tf-outputs.outputs.s3_bucket_name }} \
           --exclude "*" \
           --include "*.html" \
           --cache-control "max-age=0,no-cache,no-store,must-revalidate"
