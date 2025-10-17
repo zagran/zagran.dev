@@ -11,331 +11,167 @@ export interface BlogPost {
 }
 
 export const blogPosts: BlogPost[] = [
-  {
-    id: "building-scalable-fintech-apps",
-    title: "Building Scalable Fintech Applications",
-    excerpt: "Learn how to design and build financial technology applications that can handle millions of transactions while maintaining security and reliability.",
-    content: `# Building Scalable Fintech Applications
+  // Add these to your blogPosts array:
 
-Financial technology applications require careful consideration of scalability, security, and reliability. In this article, I'll share my experience building enterprise-level fintech solutions at Capital One.
+{
+  id: "monitoring-email-bounces-aws-ses",
+  title: "Monitoring Your Email Bounces and Bounce Rate using Amazon SES, Lambda, SNS, and DynamoDB",
+  excerpt: "Learn how to build a robust email bounce monitoring system using AWS services to maintain a healthy SES reputation and prevent service disruptions.",
+  content: `# Monitoring Your Email Bounces and Bounce Rate using Amazon SES, Lambda, SNS, and DynamoDB
 
-## Key Principles
+When using Amazon SES, a situation may occur where your Account status in the Amazon SES Reputation Dashboard changes from HEALTHY, causing Amazon to stop the ability to send emails. To prevent this, it is better to start monitoring your Reputation right after going into production.
 
-### 1. Security First
-Security is paramount in fintech. Every decision must be evaluated through a security lens. This includes:
-- End-to-end encryption
-- Multi-factor authentication
-- Regular security audits
-- Compliance with financial regulations
+## The Solution Stack
 
-### 2. Scalable Architecture
-Your architecture must handle growth gracefully:
-- Microservices architecture for modularity
-- Event-driven systems for async operations
-- Caching strategies for performance
-- Load balancing for high availability
+An adequate bundle of services for this includes:
+- **AWS Lambda**: Process bounce notifications
+- **Amazon SNS**: Receive events from Amazon SES
+- **Amazon DynamoDB**: Store bounce data for analysis
 
-### 3. Data Integrity
-Financial data must be accurate and consistent:
-- ACID transactions
-- Database replication
-- Regular backups
-- Audit trails
+Amazon SNS will get events from Amazon SES and trigger Lambda. The Lambda function will store data to DynamoDB and do other things that you want — for example, remove an email address from a subscription list via an API, or send a message to Slack/Telegram/Messenger.
 
-## Technology Stack
+## Setting Up SNS Topics
 
-At Capital One, we leverage modern technologies:
-- **Backend**: Python/Django, Node.js for APIs
-- **Frontend**: React with TypeScript
-- **Cloud**: AWS for infrastructure
-- **Databases**: PostgreSQL, Redis for caching
+First, in the Notifications settings of your domain, add Amazon SNS Topics for the Bounces, Complaints and Deliveries events.
 
-## Best Practices
+You can use 1 topic for all events, separating is optional. For example, if you want to send Complaint events to Lambda and the email of the administrator, it is better to separate.
 
-1. **Testing**: Comprehensive unit, integration, and end-to-end tests
-2. **Monitoring**: Real-time monitoring and alerting
-3. **Documentation**: Keep architecture and API docs updated
-4. **Code Reviews**: Mandatory peer reviews for all changes
+## Creating the Lambda Function
 
-Building fintech applications is challenging but rewarding. The key is balancing innovation with reliability and security.`,
-    date: "2025-03-15",
-    readTime: "8 min read",
-    category: "FinTech",
-    tags: ["Python", "Django", "Scalability", "Security"],
-  },
-  {
-    id: "django-best-practices-2025",
-    title: "Django Best Practices in 2025",
-    excerpt: "A comprehensive guide to modern Django development, covering patterns, performance optimization, and enterprise-level features.",
-    content: `# Django Best Practices in 2025
+Create a Lambda function named \`ses-notification-nodejs\`:
+- Use Node.js 12.x Runtime with default settings
+- This is enough for this task
 
-Django continues to be one of the most powerful web frameworks for Python developers. Here are the best practices I've learned building production applications.
+## Setting Up DynamoDB
 
-## Project Structure
+Create a DynamoDB table:
+- Table name: \`mailing\`
+- Primary key: \`UserId\`
+- Default settings will be enough for a start
+- You can fine-tune it later
 
-Organize your Django project for maintainability:
-\`\`\`
-myproject/
-├── apps/
-│   ├── users/
-│   ├── api/
-│   └── core/
-├── config/
-├── static/
-└── manage.py
-\`\`\`
+## IAM Permissions
 
-## Performance Optimization
+Go to IAM and add a permission to the Lambda role. The best option is to add the permission to exactly one table. This follows the principle of least privilege and ensures your Lambda function only has access to the resources it needs.
 
-### Database Query Optimization
-- Use \`select_related()\` and \`prefetch_related()\`
-- Index frequently queried fields
-- Use database connection pooling
-- Implement query result caching
+## Lambda Function Code
 
-### Caching Strategy
-\`\`\`python
-from django.core.cache import cache
+The Lambda function processes SNS notifications from SES and stores them to DynamoDB. Key features:
+- Parse incoming SNS messages
+- Extract bounce/complaint information
+- Store data in DynamoDB for tracking
+- Optional: Send notifications to external services (Slack, Telegram, etc.)
 
-def get_user_profile(user_id):
-    cache_key = f'user_profile_{user_id}'
-    profile = cache.get(cache_key)
-    
-    if not profile:
-        profile = UserProfile.objects.get(id=user_id)
-        cache.set(cache_key, profile, 3600)
-    
-    return profile
-\`\`\`
+## Benefits
 
-## Security
+With this setup, you can:
+- Monitor all Bounce and Complaint events from your SES service
+- Keep your Amazon SES in a healthy state
+- Prevent service disruptions due to reputation issues
+- Build automated responses to email issues
 
-1. **Environment Variables**: Never commit secrets
-2. **CSRF Protection**: Always enabled
-3. **SQL Injection**: Use ORM properly
-4. **XSS Protection**: Sanitize user input
+## Code Repository
 
-## Testing
+You can find examples with Telegram notification in my repository: [zagran/ses-notification-nodejs](https://github.com/zagran/ses-notification-nodejs)
 
-Write tests for everything:
-\`\`\`python
-from django.test import TestCase
+This monitoring system is essential for any production application using Amazon SES to ensure reliable email delivery and maintain sender reputation.`,
+  date: "2020-03-15",
+  readTime: "7 min read",
+  category: "Cloud",
+  tags: ["AWS", "Lambda", "SES", "DynamoDB", "SNS", "Email", "DevOps"],
+},
+{
+  id: "using-image-search-in-your-app",
+  title: "Using Image Search in Your App",
+  excerpt: "Implement Google Custom Search API to automatically provide relevant images for user-generated content, improving engagement and user experience.",
+  content: `# Using Image Search in Your App
 
-class UserModelTest(TestCase):
-    def test_user_creation(self):
-        user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com'
-        )
-        self.assertEqual(user.username, 'testuser')
+Every content on a site, in an application or simply in a letter, looks more expressive and eye-catching when it's accompanied by an image. Images are a vital part of our online lives, from ordinary users to media giants and news portals.
+
+## The Problem
+
+Let's say we ask a user to create some content in our system, for example, their financial goal. In this case, it's necessary to put an image here (to provide an example of the user's motivation, visualization).
+
+Most of the time, the user will skip this phase, since there are multiple steps involved in finding/selecting/taking a photo and uploading it. People are lazy, and if a photo is not readily available in their desktop or photo gallery, they'll often skip this step.
+
+## Available Solutions
+
+There are lots of solutions available:
+- Third-party services like [Unsplash](https://unsplash.com/)
+- [Splashbase](http://www.splashbase.co/)
+
+Although these are very good services, most likely you will have to pay for them. This can be frustrating when many of the features that come with a paid service may not even be needed.
+
+## Google Custom Search Solution
+
+If you are already working with some Google products in your project, why not utilize their search service? According to statistics from 2018, 90.15% of users will use Google for image searches.
+
+### Setup
+
+First, add the necessary packages:
+\`\`\`bash
+pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
 \`\`\`
 
-## Modern Django Features
-
-- **Async Views**: For I/O-bound operations
-- **Type Hints**: Better IDE support and code quality
-- **Django Ninja**: Fast, modern API framework
-
-These practices have helped me build robust, maintainable Django applications at scale.`,
-    date: "2025-02-28",
-    readTime: "10 min read",
-    category: "Python",
-    tags: ["Django", "Python", "Best Practices", "Backend"],
-  },
-  {
-    id: "react-typescript-patterns",
-    title: "Advanced React TypeScript Patterns",
-    excerpt: "Master advanced TypeScript patterns for React applications, including generics, discriminated unions, and type-safe hooks.",
-    content: `# Advanced React TypeScript Patterns
-
-TypeScript brings type safety to React applications. Let's explore advanced patterns that make your code more robust and maintainable.
-
-## Generic Components
-
-Create reusable, type-safe components:
-\`\`\`typescript
-interface ListProps<T> {
-  items: T[];
-  renderItem: (item: T) => React.ReactNode;
-}
-
-function List<T>({ items, renderItem }: ListProps<T>) {
-  return (
-    <div>
-      {items.map((item, index) => (
-        <div key={index}>{renderItem(item)}</div>
-      ))}
-    </div>
-  );
-}
+Don't forget to add these packages to requirements:
+\`\`\`bash
+pip freeze > requirements.txt
 \`\`\`
 
-## Discriminated Unions
+### API Configuration
 
-Type-safe state management:
-\`\`\`typescript
-type RequestState<T> =
-  | { status: 'idle' }
-  | { status: 'loading' }
-  | { status: 'success'; data: T }
-  | { status: 'error'; error: Error };
+1. Activate custom search in your Google account to receive an API_KEY
+2. Create a Custom Search Engine ID (CSE_ID) using the panel at [https://cse.google.com/cse/all](https://cse.google.com/cse/all)
+3. Enable the image search function
 
-function useRequest<T>(url: string): RequestState<T> {
-  // Implementation
-}
-\`\`\`
+### Implementation
 
-## Custom Hook Patterns
+Create a service class that receives a phrase or term for entry (in our case, the goal header) and returns an array of images.
 
-Type-safe custom hooks:
-\`\`\`typescript
-function useLocalStorage<T>(
-  key: string,
-  initialValue: T
-): [T, (value: T) => void] {
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    try {
-      const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
-    } catch {
-      return initialValue;
-    }
-  });
+### Supported Parameters
 
-  const setValue = (value: T) => {
-    setStoredValue(value);
-    window.localStorage.setItem(key, JSON.stringify(value));
-  };
-
-  return [storedValue, setValue];
-}
-\`\`\`
-
-## Component Props with Variants
-
-\`\`\`typescript
-type ButtonVariant = 'primary' | 'secondary' | 'danger';
-
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: ButtonVariant;
-  isLoading?: boolean;
-}
-
-const Button: React.FC<ButtonProps> = ({ 
-  variant = 'primary', 
-  isLoading, 
-  children, 
-  ...props 
-}) => {
-  return (
-    <button {...props}>
-      {isLoading ? 'Loading...' : children}
-    </button>
-  );
-};
-\`\`\`
-
-## Best Practices
-
-1. **Avoid \`any\`**: Always prefer specific types
-2. **Use utility types**: \`Pick\`, \`Omit\`, \`Partial\`, etc.
-3. **Type inference**: Let TypeScript infer when possible
-4. **Strict mode**: Enable all strict TypeScript flags
-
-These patterns have significantly improved code quality in my projects.`,
-    date: "2025-02-10",
-    readTime: "12 min read",
-    category: "Frontend",
-    tags: ["React", "TypeScript", "JavaScript", "Frontend"],
-  },
-  {
-    id: "aws-lambda-best-practices",
-    title: "AWS Lambda Best Practices for Production",
-    excerpt: "Essential tips for building production-ready serverless applications with AWS Lambda, covering cold starts, monitoring, and cost optimization.",
-    content: `# AWS Lambda Best Practices for Production
-
-AWS Lambda enables serverless computing, but building production-ready functions requires careful consideration. Here are my battle-tested practices.
-
-## Cold Start Optimization
-
-Reduce cold start times:
-\`\`\`python
-import json
-
-# Initialize outside handler
-db_connection = initialize_connection()
-
-def lambda_handler(event, context):
-    # Reuse connection
-    result = db_connection.query(event['query'])
-    return {
-        'statusCode': 200,
-        'body': json.dumps(result)
-    }
-\`\`\`
-
-## Memory and Timeout Configuration
-
-- Start with 512MB memory
-- Monitor actual usage
-- Adjust based on CloudWatch metrics
-- Set appropriate timeouts (not too high!)
-
-## Error Handling
+Google Custom Search service supports many parameters. For our use case, we used:
 
 \`\`\`python
-def lambda_handler(event, context):
-    try:
-        # Your logic
-        return success_response(data)
-    except ValidationError as e:
-        logger.error(f"Validation error: {e}")
-        return error_response(400, str(e))
-    except Exception as e:
-        logger.exception("Unexpected error")
-        return error_response(500, "Internal error")
+searchType='image'  # Indicates we're looking for images
+imgType='photo'     # Options: clipart, face, lineart, stock, photo, animated
+imgSize='xxlarge'   # Options: icon, small, medium, large, xlarge, xxlarge, huge
 \`\`\`
 
-## Monitoring and Logging
+#### Parameter Choices
 
-1. **CloudWatch Logs**: Structure your logs
-2. **CloudWatch Metrics**: Track invocations, errors, duration
-3. **X-Ray**: Trace requests across services
-4. **Alarms**: Set up alerts for errors and throttling
+- **imgSize**: We tried all options and found \`xxlarge\` returns the most relevant images
+- **imgType**: \`photo\` option is most suitable for realistic images
+- **imgDominantColor**: Optional parameter to specify predominant color in photos
 
-## Cost Optimization
+### Pagination
 
-- Use appropriate memory allocation
-- Implement caching where possible
-- Consider Provisioned Concurrency for latency-sensitive functions
-- Archive old CloudWatch logs
+The pagination parameters were skipped intentionally as 10 images are given by default. This is exactly what we need for the user to choose from.
 
-## Security
+### Response Handling
 
-- Use IAM roles with least privilege
-- Encrypt environment variables
-- Use VPC for database access
-- Regular security audits
+We return only the links, then depending on the selected image, we will process it as needed:
+- Save the image
+- Optimize for web
+- Crop to required dimensions
+- Apply any other transformations
 
-## Deployment
+## Results
 
-Use Infrastructure as Code:
-\`\`\`yaml
-# SAM template
-Resources:
-  MyFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: app.lambda_handler
-      Runtime: python3.11
-      Timeout: 30
-      MemorySize: 512
-\`\`\`
+The user enters the title, and we can provide excellent accompanying pictures automatically. The result will differ from what the user would get when using the browser, as the browser has different search settings by default.
 
-Lambda is powerful when used correctly. Follow these practices for reliable, cost-effective serverless applications.`,
-    date: "2025-01-20",
-    readTime: "7 min read",
-    category: "Cloud",
-    tags: ["AWS", "Lambda", "Serverless", "DevOps"],
-  },
+## Benefits
+
+- Improved user engagement
+- Reduced friction in content creation
+- Automated image suggestion
+- Cost-effective compared to paid services
+- Leverages Google's powerful image search
+
+This solution significantly improves the user experience by automatically providing relevant images for user-generated content without requiring manual search and upload steps.`,
+  date: "2019-09-24",
+  readTime: "6 min read",
+  category: "Backend",
+  tags: ["Python", "Google API", "Image Search", "UX", "Automation"],
+}
 ];
