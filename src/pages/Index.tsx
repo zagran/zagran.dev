@@ -65,7 +65,7 @@ const Index = () => {
               <div className="flex flex-wrap gap-3 justify-center md:justify-start">
                 <Button variant="social" size="default" asChild>
                   <a
-                    href="https://www.linkedin.com/in/serhii-zahranychnyi/"
+                    href="https://www.linkedin.com/in/zagran/"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
