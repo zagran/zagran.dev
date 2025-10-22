@@ -3,7 +3,7 @@ import { SkillCard } from "@/components/SkillCard";
 import { BlogCard } from "@/components/BlogCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Linkedin, Github, Mail, BookOpen, ArrowRight } from "lucide-react";
+import { LinkedinIcon, GithubIcon, Mail, BookOpen, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import profileImage from "@/assets/profile.png";
 import { blogPosts } from "@/data/blogPosts";
@@ -13,22 +13,42 @@ const Index = () => {
     {
       emoji: "🐍",
       title: "Backend Development",
-      description: "Python, Django, Node.js, APIs, and scalable server architecture",
+      description: "Python, Node.js, Java, Go, RESTful APIs, and scalable server architecture",
     },
     {
       emoji: "⚛️",
       title: "Frontend Development",
-      description: "React, Vue, JavaScript, TypeScript, and modern web frameworks",
+      description: "React, JavaScript, TypeScript, and modern web frameworks",
     },
     {
       emoji: "☁️",
-      title: "Cloud & DevOps",
-      description: "AWS, Docker, CI/CD, Lambda, and infrastructure automation",
+      title: "Cloud Platforms",
+      description: "AWS, GCP, Azure, and multi-cloud infrastructure",
+    },
+    {
+      emoji: "🗄️",
+      title: "Databases",
+      description: "Oracle Database, PostgreSQL, MySQL, MongoDB, DynamoDB, and SQL optimization",
+    },
+    {
+      emoji: "🚀",
+      title: "DevOps & Infrastructure",
+      description: "Docker, Kubernetes, Terraform, CI/CD, and container orchestration",
+    },
+    {
+      emoji: "⚡",
+      title: "Data Engineering",
+      description: "PySpark, data processing pipelines, and analytics at scale",
     },
     {
       emoji: "🏦",
       title: "Financial Technology",
       description: "Enterprise solutions, data processing, and secure banking systems",
+    },
+    {
+      emoji: "🔧",
+      title: "System Design",
+      description: "Microservices, distributed systems, and scalable architectures",
     },
   ];
 
@@ -69,13 +89,13 @@ const Index = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <Linkedin className="h-4 w-4" />
+                    <LinkedinIcon className="h-4 w-4" />
                     LinkedIn
                   </a>
                 </Button>
                 <Button variant="social" size="default" asChild>
                   <a href="https://github.com/zagran" target="_blank" rel="noopener noreferrer">
-                    <Github className="h-4 w-4" />
+                    <GithubIcon className="h-4 w-4" />
                     GitHub
                   </a>
                 </Button>
@@ -144,7 +164,7 @@ const Index = () => {
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {skills.map((skill) => (
-              <SkillCard key={skill.title} {...skill} icon={Github} />
+              <SkillCard key={skill.title} {...skill} icon={GithubIcon} />
             ))}
           </div>
         </div>
