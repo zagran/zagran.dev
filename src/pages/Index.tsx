@@ -10,7 +10,7 @@ import { blogPosts } from "@/data/blogPosts";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 
 const Index = () => {
-  useDocumentTitle("Serhii Zahranychnyi — Software Developer | Building Scalable Fintech Solutions", "");
+  useDocumentTitle("Serhii Zahranychnyi — Senior Software Engineer | Building Scalable Fintech Solutions", "");
   const skills = [
     {
       emoji: "🐍",
@@ -73,7 +73,7 @@ const Index = () => {
                   </span>
                 </h1>
                 <p className="text-lg sm:text-xl text-muted-foreground">
-                  Software Developer at Capital One
+                  Senior Software Engineer at Capital One
                 </p>
               </div>
 
@@ -130,7 +130,7 @@ const Index = () => {
                   <div className="text-center space-y-2">
                     <h3 className="text-xl font-semibold text-foreground">Serhii Zahranychnyi</h3>
                     <p className="text-sm text-muted-foreground">
-                      Software Developer @ Capital One
+                      Senior Software Engineer @ Capital One
                     </p>
                   </div>
                   <div className="space-y-2 text-sm text-muted-foreground">
@@ -227,7 +227,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="py-8 border-t border-border">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© 2025 Serhii Zahranychnyi. Software Developer passionate about building innovative solutions.</p>
+          <p>© 2025 Serhii Zahranychnyi. Senior Software Engineer passionate about building innovative solutions.</p>
         </div>
       </footer>
     </div>
