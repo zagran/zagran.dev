@@ -5,8 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
 import { useState } from "react";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 
 const Blog = () => {
+  useDocumentTitle("Articles on Software Engineering, Cloud Architecture & Fintech", "");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 

@@ -5,10 +5,13 @@ import { Calendar, Clock, ArrowLeft } from "lucide-react";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { blogPosts } from "@/data/blogPosts";
 import ReactMarkdown from "react-markdown";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 
 const BlogPost = () => {
   const { id } = useParams<{ id: string }>();
   const post = blogPosts.find((p) => p.id === id);
+
+  useDocumentTitle(post ? (post.seoTitle || post.title) : "Blog Post", "");
 
   if (!post) {
     return <Navigate to="/blog" replace />;

@@ -59,7 +59,7 @@ npm preview
 - `src/pages/` - Page-level components (Index, Blog, BlogPost, NotFound)
 - `src/data/` - Data files (blogPosts.ts contains blog content)
 - `src/lib/` - Utility functions (utils.ts with cn helper)
-- `src/hooks/` - Custom React hooks
+- `src/hooks/` - Custom React hooks (use-document-title.ts for dynamic page titles)
 
 ### Import Alias
 
@@ -72,7 +72,9 @@ import { Button } from "@/components/ui/button";
 
 Blog posts are stored as TypeScript objects in `src/data/blogPosts.ts`. Each post contains:
 - `id` - URL-friendly identifier
-- `title`, `excerpt`, `content` - Post text
+- `title` - Display title shown in the post
+- `seoTitle` (optional) - SEO-optimized title for browser tab (follows patterns like "How to...", "X Ways to...", "Problem → Solution")
+- `excerpt`, `content` - Post text
 - `date`, `readTime` - Metadata
 - `category`, `tags` - Classification
 - `coverImage` (optional) - Hero image
@@ -160,3 +162,8 @@ Components use Tailwind CSS with a custom theme configuration in `tailwind.confi
 - When adding new routes, always place them before the `*` catch-all route
 - Blog posts are currently static data in TypeScript files (not fetched from a CMS)
 - The project uses SWC for faster builds via `@vitejs/plugin-react-swc`
+- Page titles follow SEO-optimized patterns:
+  - Homepage: "[Name] — [Role] | [Core Specialty]"
+  - Blog listing: Descriptive without suffix
+  - Blog posts: Use `seoTitle` if available, formatted for engagement ("How to...", "X Ways to...", etc.)
+  - Use `useDocumentTitle(title, "")` to omit the suffix when the title already includes branding

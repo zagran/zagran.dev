@@ -7,8 +7,10 @@ import { LinkedinIcon, GithubIcon, Mail, BookOpen, ArrowRight } from "lucide-rea
 import { Link } from "react-router-dom";
 import profileImage from "@/assets/profile.png";
 import { blogPosts } from "@/data/blogPosts";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 
 const Index = () => {
+  useDocumentTitle("Serhii Zahranychnyi — Software Developer | Building Scalable Fintech Solutions", "");
   const skills = [
     {
       emoji: "🐍",

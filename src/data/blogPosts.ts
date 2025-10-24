@@ -1,6 +1,7 @@
 export interface BlogPost {
   id: string;
   title: string;
+  seoTitle?: string; // SEO-optimized title for browser tab
   excerpt: string;
   content: string;
   date: string;
@@ -15,6 +16,7 @@ export const blogPosts: BlogPost[] = [
 {
   id: "top-ai-coding-tools-transforming-development-2025",
   title: "The AI Coding Revolution: Top Tools Transforming Development in 2025",
+  seoTitle: "10 AI Coding Tools That Will 10x Your Development Speed in 2025",
   excerpt: "Explore the cutting-edge AI tools that are redefining software development - from autonomous coding agents to instant full-stack app generators that turn ideas into production-ready applications.",
   content: `# The AI Coding Revolution: Top Tools Transforming Development in 2025
 
@@ -138,6 +140,7 @@ The future of development is not about writing every line of code yourself - it'
 {
   id: "using-image-search-in-your-app",
   title: "Using Image Search in Your App",
+  seoTitle: "How to Add Automatic Image Suggestions Using Google Search API",
   excerpt: "Implement Google Custom Search API to automatically provide relevant images for user-generated content, improving engagement and user experience.",
   content: `# Using Image Search in Your App
 
@@ -232,6 +235,7 @@ This solution significantly improves the user experience by automatically provid
 {
   id: "monitoring-email-bounces-aws-ses",
   title: "Monitoring Your Email Bounces and Bounce Rate using Amazon SES, Lambda, SNS, and DynamoDB",
+  seoTitle: "How to Build an AWS SES Bounce Monitoring System That Prevents Email Shutdowns",
   excerpt: "Learn how to build a robust email bounce monitoring system using AWS services to maintain a healthy SES reputation and prevent service disruptions.",
   content: `# Monitoring Your Email Bounces and Bounce Rate using Amazon SES, Lambda, SNS, and DynamoDB
 
