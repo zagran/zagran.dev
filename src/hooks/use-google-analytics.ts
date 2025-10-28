@@ -17,10 +17,13 @@ export const useGoogleAnalytics = () => {
   useEffect(() => {
     // Check if gtag is available
     if (typeof window.gtag === "function") {
-      // Send page view event
-      window.gtag("config", "G-9G6SHYS6WP", {
-        page_path: location.pathname + location.search,
-      });
+      // Wait for next tick to ensure document.title is updated by page components
+      setTimeout(() => {
+        window.gtag!("config", "G-9G6SHYS6WP", {
+          page_path: location.pathname + location.search,
+          page_title: document.title,
+        });
+      }, 0);
     }
   }, [location]);
 };
