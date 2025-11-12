@@ -136,7 +136,7 @@ const Index = () => {
                   <div className="space-y-2 text-sm text-muted-foreground">
                     <p className="flex items-center gap-2">
                       <span>🏦</span>
-                      Building fintech solutions at Capital One
+                      Changing banking for good with humanity, ingenuity and simplicity
                     </p>
                     <p className="flex items-center gap-2">
                       <span>📍</span>
@@ -145,6 +145,17 @@ const Index = () => {
                     <p className="flex items-center gap-2">
                       <span>💡</span>
                       Python & Django enthusiast
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <span>🎓</span>
+                      <a
+                        href="https://www.credly.com/badges/2752fffe-45dd-4993-99d6-ce3f12790e2f/zagran.dev"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-foreground transition-colors underline decoration-dotted"
+                      >
+                        AWS Certified Solutions Architect
+                      </a>
                     </p>
                   </div>
                 </CardContent>
