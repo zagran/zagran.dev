@@ -13,6 +13,192 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
 {
+  id: "thoughtworks-tech-radar-vol-33-top-10",
+  title: "Top 10 Technologies from Thoughtworks Tech Radar Vol. 33",
+  seoTitle: "10 Must-Know Technologies from Thoughtworks Tech Radar 2025 You Should Adopt Now",
+  excerpt: "The latest Thoughtworks Technology Radar is here. Discover the 10 technologies that matter most—from Pydantic for AI apps to why you should avoid Text-to-SQL. AI infrastructure is maturing fast, but engineering principles haven't changed.",
+  content: `# Top 10 Technologies from Thoughtworks Tech Radar Vol. 33
+
+The latest [Technology Radar](https://www.thoughtworks.com/en-us/radar) is here, and here are the 10 technologies you should actually care about.
+
+## 🟢 Adopt Now
+
+### 1. Pydantic for Python AI Apps
+
+Stop playing roulette with LLM outputs. Pydantic transforms unpredictable text into type-safe Python objects. If you're building production GenAI and not using this, you're doing it wrong.
+
+**Why it matters:** LLMs are probabilistic by nature, but production systems need guarantees. Pydantic provides schema validation, type checking, and automatic parsing of LLM outputs into structured Python objects. This means fewer runtime errors, better testability, and more reliable AI applications.
+
+**Use cases:**
+- Validating structured outputs from GPT-4, Claude, or Gemini
+- Building robust tool-calling systems for AI agents
+- Creating type-safe data pipelines for RAG applications
+- Ensuring API consistency in LangChain applications
+
+### 2. Arm in the Cloud
+
+AWS Graviton, Azure Ampere, GCP Tau T2A — the cost and energy savings are real (up to 47% cost savings and 62% reduced carbon footprint). Teams are migrating microservices, databases, and even HPC workloads with minimal changes. Multi-arch Docker images make this nearly painless.
+
+**Why it matters:** The economics are undeniable. Arm-based instances deliver better price-performance ratios than traditional x86 instances, especially for workloads like web servers, containerized microservices, and data processing pipelines.
+
+**Migration path:**
+1. Build multi-architecture Docker images (linux/amd64, linux/arm64)
+2. Test your workload on Arm instances in a staging environment
+3. Gradually migrate services that show performance gains
+4. Monitor and optimize
+
+**Gotchas:** Some legacy dependencies may not have ARM64 builds. Check your dependency tree before committing.
+
+### 3. Continuous Compliance
+
+With AI generating larger changesets, manual compliance doesn't scale. Automate checks with Open Policy Agent and SLSA-compliant SBOMs in your CI/CD pipeline — meet regulatory and security standards on an ongoing basis through automation. Non-negotiable.
+
+**Why it matters:** Compliance is no longer a quarterly audit exercise. With rapid deployment cycles and AI-assisted development increasing change velocity, you need automated guardrails.
+
+**Implementation:**
+- Integrate policy-as-code tools (Open Policy Agent, Kyverno) into CI/CD
+- Generate and verify SBOMs (Software Bill of Materials) automatically
+- Implement SLSA supply chain security framework
+- Automate security scanning and vulnerability management
+- Create compliance dashboards with real-time status
+
+**ROI:** Faster audits, reduced risk exposure, and the ability to move fast without breaking compliance requirements.
+
+## 🟡 Trial Now
+
+### 4. LangGraph
+
+Building stateful multi-agent applications? LangGraph gives you low-level control over agent workflows, memory management, and state persistence. The tool enables you to build robust, production-grade agentic applications.
+
+**Why it matters:** LangChain is great for prototypes, but production agentic systems need deterministic state management, error handling, and observability. LangGraph provides a graph-based framework where you define explicit state transitions.
+
+**Use cases:**
+- Multi-agent collaboration systems
+- Complex RAG pipelines with routing and fallback logic
+- Stateful chatbots with memory persistence
+- Autonomous agents that need to track progress over long-running tasks
+
+**Key features:**
+- Explicit state graphs with conditional edges
+- Built-in persistence for conversation history
+- Human-in-the-loop approvals
+- Streaming support for real-time responses
+
+### 5. Claude Code
+
+Released less than a year ago, Claude Code has already been widely adopted. Works not just for actual coding but for tech specs, config, infrastructure, and docs. Just maintain quality standards — don't get complacent with AI-generated code.
+
+**Why it matters:** Claude Code represents a new paradigm in developer tools. It's not just autocomplete; it's a collaborative coding partner that understands context across your entire codebase.
+
+**Best practices:**
+- Always review AI-generated code for security vulnerabilities
+- Use it for boilerplate, tests, and documentation
+- Maintain test coverage standards (AI code still needs tests)
+- Treat it like a junior developer: guide, review, iterate
+
+**What sets it apart:** Superior reasoning capabilities, ability to understand large codebases, and excellent at explaining complex technical concepts.
+
+### 6. vLLM
+
+State-of-the-art serving throughput, memory-efficient inference engine. Azure uses it as the default. If you're running LLMs at scale, this should be on your radar.
+
+**Why it matters:** Running LLMs in production is expensive. vLLM uses advanced techniques like PagedAttention to dramatically improve throughput and reduce memory usage.
+
+**Performance gains:**
+- Up to 24x higher throughput compared to HuggingFace Transformers
+- Near-optimal memory utilization through paged memory management
+- Support for continuous batching and GPU parallelism
+
+**When to use it:** Self-hosting open-source LLMs (Llama, Mistral, CodeLlama) at scale for cost optimization and data privacy.
+
+## ⚪ Assess Carefully
+
+### 7. Model Context Protocol (MCP)
+
+The integration protocol that ate everything. JetBrains supports it. Apple supports it. Your coding assistant has three MCP servers running. But here's the catch: Don't naively expose your APIs. Build dedicated, secure MCP servers for agentic workflows.
+
+**Why it matters:** MCP standardizes how AI applications connect to data sources and tools. But with great power comes great responsibility.
+
+**Security considerations:**
+- Don't expose internal APIs directly through MCP
+- Implement authentication and authorization at the MCP layer
+- Use rate limiting and audit logging
+- Build purpose-specific MCP servers with minimal privilege
+- Validate and sanitize all inputs from AI agents
+
+**Architecture pattern:** Create an MCP gateway layer that sits between your AI agents and internal systems, with proper security controls and observability.
+
+### 8. Topology-Aware Scheduling
+
+Running multi-GPU training? Random placement is killing your performance. Start treating GPU topology as a first-class scheduling concern. Tools like Kueue can help.
+
+**Why it matters:** GPU-to-GPU communication bandwidth varies dramatically based on physical topology (NVLink, PCIe, network). Naive scheduling can result in 2-3x slower training times.
+
+**Implementation:**
+- Map your GPU topology (nvidia-smi topo -m)
+- Use Kubernetes with topology-aware scheduling plugins
+- Configure gang scheduling for multi-GPU jobs
+- Monitor GPU communication patterns
+
+**Impact:** Significantly faster training times and better GPU utilization, especially for large-scale distributed training.
+
+### 9. Small Language Models (SLMs)
+
+Phi-3, SmolLM2, DeepSeek — they're showing that most agentic tasks don't need frontier models. Lower cost, reduced latency, better efficiency. Consider SLMs as your default for agentic workflows.
+
+**Why it matters:** Not every task needs GPT-4. Many use cases (classification, extraction, routing, simple reasoning) can be handled by smaller models at a fraction of the cost and latency.
+
+**Model selection guide:**
+- **Frontier models (GPT-4, Claude 3.5):** Complex reasoning, code generation, creative writing
+- **SLMs (Phi-3, Gemma 2):** Classification, extraction, routing, simple Q&A
+- **Specialized models:** Domain-specific tasks (medical, legal, code-only)
+
+**Economics:** Running a 7B parameter model can be 10-100x cheaper than GPT-4, with sub-100ms latency on modern GPUs.
+
+## 🔴 Hold (Don't Do This)
+
+### 10. Text to SQL
+
+LLMs that translate natural language into SQL hallucinate too often. Non-deterministic outputs make debugging a nightmare. Use a governed semantic layer (Cube, dbt) or GraphQL/MCP instead.
+
+**Why it's problematic:**
+- **Hallucinations:** LLMs will confidently generate syntactically correct but semantically wrong SQL
+- **Security risks:** SQL injection vulnerabilities if not properly sandboxed
+- **Schema drift:** Changes to your database schema break queries unpredictably
+- **No governance:** Bypasses data access controls and compliance requirements
+
+**Better alternatives:**
+- **Semantic layers:** Tools like Cube.dev or dbt Semantic Layer provide governed metrics definitions
+- **GraphQL:** Strongly-typed APIs with built-in query validation
+- **MCP servers:** Purpose-built data access APIs for AI agents with security controls
+- **Parameterized queries:** Pre-defined query templates with natural language parameter extraction
+
+**When it might work:** Internal tools for technical users who understand the data model and can validate outputs.
+
+## Key Takeaways
+
+AI infrastructure is maturing fast. Agents need guardrails, not just capabilities. And the fundamentals — TDD, code reviews, security — matter more than ever, not less.
+
+**The engineering principles didn't change:**
+- Write tests for AI-generated code
+- Review everything before production
+- Monitor and observe AI systems in production
+- Maintain security standards
+- Keep humans in the loop for critical decisions
+
+**The tools changed, but the craft remains:** Building reliable, secure, maintainable systems is still the goal. AI is a powerful tool, but it's not a replacement for engineering discipline.
+
+## What's on Your Radar?
+
+The pace of change in AI and infrastructure tooling is unprecedented. What technologies are you betting on for 2025–2026? What patterns are emerging in your production systems?
+
+The next wave of technology is already forming. Stay curious, stay skeptical, and always validate the hype with real-world experimentation.`,
+  date: "2025-11-11",
+  readTime: "10 min read",
+  category: "AI",
+  tags: ["AI", "Cloud Computing", "Software Engineering", "Machine Learning", "DevOps", "Tech Radar"],
+},
+{
   id: "aws-disaster-recovery-strategies",
   title: "AWS Disaster Recovery Strategies: What to Do When Your Region Goes Dark",
   seoTitle: "AWS Disaster Recovery Strategies: What to Do When Your Region Goes Dark",
