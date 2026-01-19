@@ -47,7 +47,7 @@ But direct revenue loss understates the damage:
 
 - **Trust erosion compounds.** PwC research shows 32% of customers abandon brands after a single bad experience. The October outage wasn't a single bad experience - it was fifteen hours of them, across every touchpoint.
 - **Insurance gaps emerge.** Most cyber policies require 8+ hours of downtime before coverage triggers. CyberCube estimated potential claims between $38 million and $581 million - but many companies discovered their actual exposure far exceeded their coverage.
-- **Innovation stalls. **When systems fail, engineering teams abandon roadmaps to fight fires. Technical debt accumulates. Strategic initiatives die in triage.
+- **Innovation stalls.** When systems fail, engineering teams abandon roadmaps to fight fires. Technical debt accumulates. Strategic initiatives die in triage.
 - **Reputation becomes liability.** In an always-on economy, downtime is a competitive disadvantage. Resilience has shifted from engineering goal to market differentiator.
 
 ## Government Systems in the Crosshairs
@@ -117,7 +117,6 @@ However, the broader point about institutional knowledge is well-established in 
 
 ## Regulators Circle: Is Big Cloud Too Big?
 
-
 ![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/mdamdebikz9qnvnjhx5a.png)
 
 The October outage triggered immediate political responses that signal a shifting landscape for cloud providers.
@@ -148,19 +147,18 @@ AWS's 99.95% five-year uptime average sounds impressive - until you realize the 
 
 Buildings fail. So do the systems we've built inside them. The question isn't whether the next outage will happen - it's whether you'll be ready when it does.
 
-
 ![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/d88hpsprsp54gk1ha7f5.png)
 
 In October 2025, one empty DNS record reminded us: the cloud isn't a metaphor - it's a building in Virginia, and buildings can fail.
 
 ## Key Sources
 
-**AWS Official Post-Event Summary (October 2025):** aws.amazon.com/message/101925/
-**Parametrix Economic Estimate:** parametrixinsurance.com
-UK CMA Cloud Investigation Final Decision (July 2025): gov.uk/cma-cases/cloud-services-market-investigation
-**UK Government AWS Contracts (Tussell data):** Referenced in The Register, October 29, 2025
-**Gartner Downtime Cost Study (2014):** blogs.gartner.com
-**PwC Customer Experience Report:** pwc.com
+- **AWS Official Post-Event Summary (October 2025):** aws.amazon.com/message/101925/
+- **Parametrix Economic Estimate:** parametrixinsurance.com
+- **UK CMA Cloud Investigation Final Decision (July 2025):** gov.uk/cma-cases/cloud-services-market-investigation
+- **UK Government AWS Contracts (Tussell data):** Referenced in The Register, October 29, 2025
+- **Gartner Downtime Cost Study (2014):** blogs.gartner.com
+- **PwC Customer Experience Report:** pwc.com
 TeleGeography Analysis (70% claim disputed): cardinalnews.org
 
 _**Disclaimer:** The views expressed in this article are my own and do not represent those of my employer. All AWS outage data is sourced from official AWS post-event summaries, industry reports from Parametrix and CyberCube, CMA investigation findings, and verified news coverage. Economic impact estimates are based on published industry methodologies and should be understood as approximations given the complexity of measuring distributed economic effects._`

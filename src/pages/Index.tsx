@@ -3,7 +3,7 @@ import { SkillCard } from "@/components/SkillCard";
 import { BlogCard } from "@/components/BlogCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { LinkedinIcon, GithubIcon, Mail, BookOpen, ArrowRight } from "lucide-react";
+import { LinkedinIcon, GithubIcon, Mail, BookOpen, ArrowRight, Code2, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import profileImage from "@/assets/profile.png";
 import { blogPosts } from "@/data/blogPosts";
@@ -105,6 +105,24 @@ const Index = () => {
                   <a href="https://medium.com/@zagran" target="_blank" rel="noopener noreferrer">
                     <BookOpen className="h-4 w-4" />
                     Medium
+                  </a>
+                </Button>
+                <Button variant="social" size="default" asChild>
+                  <a href="https://dev.to/zagran" target="_blank" rel="noopener noreferrer">
+                    <Code2 className="h-4 w-4" />
+                    Dev.to
+                  </a>
+                </Button>
+                <Button variant="social" size="default" asChild>
+                  <a href="https://mentor.sh/mentors/zagran" target="_blank" rel="noopener noreferrer">
+                    <Users className="h-4 w-4" />
+                    Mentor.sh
+                  </a>
+                </Button>
+                <Button variant="social" size="default" asChild>
+                  <a href="https://adplist.org/mentors/serhii-zahranychnyi" target="_blank" rel="noopener noreferrer">
+                    <Users className="h-4 w-4" />
+                    ADPList
                   </a>
                 </Button>
                 <Button variant="social" size="default" asChild>
