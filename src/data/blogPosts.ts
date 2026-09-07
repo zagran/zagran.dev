@@ -9,9 +9,499 @@ export interface BlogPost {
   category: string;
   tags: string[];
   coverImage?: string;
+  mediumUrl?: string; // canonical Medium permalink
+  publication?: string; // Medium publication it ran in, if any
 }
 
 export const blogPosts: BlogPost[] = [
+{
+  id: "the-trust-your-zero-trust-architecture-still-grants",
+  title: "The Trust Your Zero-Trust Architecture Still Grants",
+  seoTitle: "Zero Trust in AWS: The Data-Plane Gap Examiners Never Ask About",
+  excerpt: "What an examiner sees, and what nobody is looking at. Mature IAM, documented segmentation, and a zero-trust policy can satisfy every question actually asked while leaving the data-plane trust gap entirely unaddressed. Four places implicit trust enters the VPC — and what verified workload identity would require.",
+  content: `![The Trust Your Zero-Trust Architecture Still Grants](https://miro.medium.com/v2/resize:fit:1024/1*Lsa5Oa2Gcd5ydWCa8zKGCg.jpeg)
+
+*What an examiner sees, and what nobody is looking at.*
+
+Since August 31, 2025, there has been no FFIEC-issued cybersecurity self-assessment tool. The FFIEC sunset the Cybersecurity Assessment Tool on that date, having announced the decision the previous September, and declined to update it. Institutions were told to refer instead to the NIST Cybersecurity Framework 2.0 and CISA's Cybersecurity Performance Goals. What a large bank measures about its own cloud security posture is now, to a meaningful degree, a matter of institutional choice.
+
+Consider what that choice produces in practice. A federal examiner reviewing a large institution's cloud architecture under the FFIEC IT Examination Handbook's Architecture, Infrastructure, and Operations booklet will look for evidence of zero-trust controls. The institution will produce IAM policies, identity federation diagrams, network segmentation records, and perimeter controls. All of it will be real, and most of it will be good.
+
+What the examiner is unlikely to see is a map of which workloads implicitly trust each other inside the VPC once IAM has said yes.
+
+That surface is what lateral movement exploits after an initial credential compromise. In financial cloud environments, where the same infrastructure that processes payments also feeds Bank Secrecy Act reporting and sanctions-screening systems, a successful pivot inside a trusted VPC threatens the integrity of the financial-crime controls that U.S. supervisors rely on, not only the confidentiality of customer data.
+
+## What the standards require, and how far apart they are from each other
+
+NIST SP 800-207, published in August 2020, defines zero trust as a set of principles rather than a product category. Its seven tenets are architectural: all communication is secured regardless of network location; access to individual enterprise resources is granted on a per-session basis; access is determined by dynamic policy including the observable state of client identity, application or service, and the requesting asset; and all resource authentication and authorization are dynamic and strictly enforced before access is allowed. The document separates the Policy Decision Point, comprising a Policy Engine that makes the access decision and a Policy Administrator that establishes or shuts down the communication path, from the Policy Enforcement Point, which enables, monitors, and eventually terminates the connection. The whole design is built around moving those components closer to the resource, so that network position confers nothing.
+
+NIST closed the cloud-native gap three years later. SP 800-207A, published on September 13, 2023, sets out identity-based segmentation for cloud-native applications in five numbered requirements covering encrypted connections, service authentication through short-lived credentials, service-to-service authorization, phishing-resistant user identity management, and per-request user authorization. It names ingress proxies, sidecars, and egress proxies as the policy enforcement points, and requires that they be "always invoked (non-bypassable), verifiable, and independent of the application code." It specifies mTLS at the connection level with certificate lifetimes as short as fifteen to thirty minutes. It names SPIFFE explicitly, defining a SPIFFE ID as a string that uniquely identifies a workload, carried in a cryptographically verifiable identity document.
+
+Most production AWS deployments in financial services implement the identity half of this model well. Role-based access control is mature. Service control policies at the AWS Organizations level enforce guardrails across accounts. Permission boundaries constrain what an assumed role can do. These controls address the Identity pillar of CISA's Zero Trust Maturity Model v2.0, which grades organizations across five pillars and four stages, from Traditional through Initial and Advanced to Optimal.
+
+Strength in one pillar does not transfer to the others. Encryption of all internal traffic, east-west included, is an Optimal-stage requirement under the ZTMM Networks pillar's Traffic Encryption function, not something available at Advanced. Many financial cloud environments sit at Initial on Networks while sitting at Advanced or better on Identity, and read their overall posture from the pillar they are strongest in.
+
+The specification gap is worth stating precisely, because it is not where most commentary places it. An IAM role assumption proves that the AWS control plane accepted a signed request from a principal holding the right permissions. It does not prove that the process making that call is the workload the role was assigned to, that the workload has not been compromised since the role was last assumed, or that the data-plane path carrying subsequent traffic is the path evaluated when the IAM decision was made. SP 800-207A's second requirement, service authentication through short-lived workload-scoped credentials, is the requirement that closes this. It is also the one AWS-native architectures most often leave open.
+
+## Four places where implicit trust enters the VPC
+
+Four structural patterns recur across AWS reference architectures and public vendor research. Each looks like a zero-trust control. Each authenticates a principal rather than a workload.
+
+### 1. VPC endpoint policies that authorize by principal, not by workload
+
+A VPC endpoint policy for an S3 bucket or a DynamoDB table can restrict access to a specific IAM role.
+
+\`\`\`json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": {"AWS": "arn:aws:iam::123456789012:role/PaymentProcessorRole"},
+    "Action": "s3:GetObject",
+    "Resource": "arn:aws:s3:::transaction-records/*"
+  }]
+}
+\`\`\`
+
+This policy permits any process that can present credentials for PaymentProcessorRole. In an ECS cluster where several services share a task role, or in a Kubernetes cluster where IRSA binds a role to a service account that multiple pods can request, it grants access to a class of workloads. The endpoint policy looks like a zero-trust control. It is a coarse-grained authorization control that leaves workload identity unverified, and CloudTrail will not separate the callers beyond a session name.
+
+AWS has shipped a partial answer. In March 2023 it introduced the global condition keys \`aws:EC2InstanceSourceVPC\` and \`aws:EC2InstanceSourcePrivateIPv4\`, which let a policy require that EC2 instance role credentials be used only from the VPC and private address they were issued to.
+
+\`\`\`json
+{
+  "Effect": "Deny",
+  "Action": "*",
+  "Resource": "*",
+  "Condition": {
+    "StringNotEquals": {
+      "aws:ec2InstanceSourceVPC": "\${aws:SourceVpc}"
+    }
+  }
+}
+\`\`\`
+
+The boundary of that control is the instructive part. \`aws:SourceVpc\` is populated only when a request traverses a VPC endpoint, so any service without VPC endpoint support falls outside it, and AWS documents that actions such as mounting an EFS file system will be denied outright. The keys bind a credential to a network location, which is a real improvement over binding it to nothing. They do not bind it to a workload, and they say nothing about which process on that instance is making the call.
+
+Deployment is thin. Datadog's 2025 State of Cloud Security study found that two in five organizations use data perimeters in AWS at all; of those, 32 percent implement them through S3 bucket policies and 13 percent through VPC endpoint policies, while fewer than 1 percent apply them at the organization level through service control policies or resource control policies. The control most often cited as evidence of cloud zero trust is, in the aggregate, both coarse and rarely placed where it would matter.
+
+### 2. mTLS terminated at the load balancer rather than at the workload
+
+Service meshes and application load balancers can enforce mutual TLS between services. AWS added mutual TLS to the Application Load Balancer in November 2023, with two modes: passthrough, which forwards the client certificate chain to the target in an HTTP header, and verify, in which the ALB validates the certificate against a trust store and terminates the connection.
+
+In verify mode the workload receives an assertion it did not check and cannot independently confirm. Traffic between the termination point and the workload process is unencrypted and unauthenticated inside the pod network or the instance. A process that can reach that internal path, through a compromised sidecar, a misconfigured network policy, or a container escape, sits on the trusted side of the mTLS boundary without ever having authenticated. This is precisely the placement problem SP 800-207A addresses by requiring that policy enforcement points be non-bypassable and independent of application code.
+
+### 3. IAM role-assumption chains that extend trust across account boundaries
+
+Cross-account role assumption is standard practice in multi-account AWS architectures. A role in account A trusts a role in account B, which trusts a role in account C. Each link is individually auditable in CloudTrail. The chain as a whole appears in no single account's IAM policies.
+
+AWS IAM Access Analyzer will not close this. Its external access analyzer applies automated reasoning to resource-based policies to identify resources reachable from outside a declared zone of trust, Region by Region, and it must be enabled in every Region in use. It evaluates edges, not paths. A three-account chain in which each hop sits inside somebody's zone of trust produces no finding at all, which is the exact shape of the problem. Transitive analysis requires separate tooling, graph-based IAM analyzers such as PMapper, and it requires the institution to treat the role-assumption graph as an artifact worth maintaining. The FFIEC AIO booklet's guidance on interconnected and third-party systems applies here: the institution is responsible for understanding the full trust graph, not just the local node.
+
+### 4. VPC Lattice auth policies, which repeat the pattern in AWS's newest east-west control
+
+The first three patterns predate 2023, and it would be reasonable to read them as legacy debt. The newest AWS service-to-service control shows otherwise.
+
+VPC Lattice auth policies are IAM resource-based policies attached to a service or service network. When the auth type is \`AWS_IAM\`, requests must carry a valid SigV4 signature, and both the auth policy and the caller's identity-based policy must explicitly allow the action. The authenticated caller is an IAM principal: a user, a role, a federated user, a service, or an account. Lattice also supports anonymous principals, so a caller inside a VPC attached to the service network that does not sign with SigV4 can still be permitted if the policy allows it.
+
+AWS shipped a Layer 7 service-to-service authorization control, positioned for zero-trust architectures, that authenticates an IAM principal rather than a workload and that permits an unauthenticated path by configuration. The gap is structural, not historical.
+
+## One mechanism, fully documented
+
+The abstraction is easier to dismiss than the mechanism, so here is the mechanism.
+
+In a default Amazon EKS configuration, a pod can reach the worker node's Instance Metadata Service and retrieve the node role's credentials with a single HTTP request to 169.254.169.254. No exploit is required beyond whatever gave the attacker execution inside the pod, an SSRF or an RCE in the application. The pod was authenticated as nothing and authorized by nothing. It inherited a role because it was running in the right place.
+
+Datadog's published guidance is that enforcing IMDSv2 alone is not sufficient. The recommended configuration is IMDSv2 required, with \`http_put_response_hop_limit\` set to 1, plus a Kubernetes NetworkPolicy blocking pod access to the metadata endpoint. Both controls are network controls. Neither of them authenticates a workload; they restrict where an ambient credential can be picked up. The same study cited above found that 49 percent of EC2 instances enforce IMDSv2, up from 32 percent the year before, and that only 14 percent of instances two or more years old do.
+
+## What the guidance already says, and what it does not yet ask
+
+The FFIEC has not overlooked system-to-system authentication. Its August 11, 2021 statement on Authentication and Access to Financial Institution Services and Systems, transmitted as OCC Bulletin 2021-36 and SR 21-14, is explicit that authentication scope covers "users accessing financial institution information systems, including employees, board members, third parties, service accounts, applications, and devices," and that "authentication considerations have extended beyond customers and include employees, third parties, and system-to-system communications." The supervisory expectation has existed for five years.
+
+What does not exist is the translation into cloud data-plane terms. The 2021 statement was written in the vocabulary of user sessions, service accounts, and API credentials. It does not say what system-to-system authentication means when the two systems are a sidecar proxy and an application process sharing a network namespace, when the credential is an ambient instance profile that no party issued to a specific workload, or when the trust relationship is a three-account role chain that no single account's policy makes visible.
+
+The AIO booklet, which is where an examiner would look for architectural criteria, was issued on June 30, 2021 and places zero trust at section VII.B, under "Evolving Technologies," alongside cloud computing, microservices, and machine learning. That placement was accurate in 2021. In 2026 it means that the one supervisory document addressing cloud architecture treats zero trust as something an examiner may encounter, rather than as an architecture with examination procedures attached.
+
+Between a principle stated in 2021 and a procedure that would test it in a 2026 cloud environment, there is nothing. Examination frameworks necessarily lag architectural practice, and the CAT sunset was a defensible response to the proliferation of better external frameworks. The lag creates a specific and consequential risk: a financial institution can demonstrate mature IAM, documented segmentation, and a zero-trust policy, and satisfy every question actually asked, while leaving the data-plane trust gap entirely unaddressed.
+
+## What verified workload identity at the data plane requires
+
+Closing the gap means treating workload identity as a cryptographic assertion rather than an inference from IAM role membership. Three changes follow.
+
+Every service-to-service call inside the VPC should carry a short-lived, workload-specific credential that the receiving service verifies before processing the request. SPIFFE and SPIRE, the open standards that underpin most production service mesh implementations and that NIST names in SP 800-207A, issue SVIDs bound to a specific workload identity rather than to a role that many workloads share. AWS has moved partway toward this. EKS Pod Identity replaces IRSA's implicit OIDC trust-policy condition with an explicit, enumerable association between a service account and a role, retrievable through \`ListPodIdentityAssociations\`. That is a genuine auditability improvement. It is not workload authentication: the credential it delivers is a standard AWS session token retrieved from a link-local endpoint by way of the \`eks-auth:AssumeRoleForPodIdentity\` action, not a verifiable identity document bound to the workload. A receiving service still cannot verify who called it. It knows only that AWS accepted a signature.
+
+mTLS should be enforced at the workload process boundary rather than at a network appliance boundary. This is operationally harder, because it requires the application or its sidecar to participate in certificate management, and it is the only configuration consistent with SP 800-207A's requirement that policy enforcement points be non-bypassable and independent of application code.
+
+Role-assumption chains should be treated as a graph and analyzed as one. Since Access Analyzer evaluates edges within a zone of trust rather than transitive paths across zones, this requires deliberate tooling and a decision that the graph is a maintained artifact, reviewed as part of change management for every new cross-account integration.
+
+## Why this reaches beyond the institution
+
+U.S. financial-crime controls depend on the integrity of the data that feeds them. Bank Secrecy Act reporting, OFAC sanctions screening, and the transaction monitoring systems that generate Suspicious Activity Reports all run on data held in cloud environments. An attacker who achieves lateral movement inside a financial institution's VPC and reaches the data stores behind those pipelines can corrupt or exfiltrate the information federal supervisors use to enforce compliance with federal law.
+
+Supervisors have said the integrity of core banking and compliance systems is a priority. The interagency paper on sound practices to strengthen operational resilience, SR 20-24, revised June 2, 2026, applies to institutions with average total consolidated assets of $250 billion or more, or $100 billion or more with at least $75 billion in specified cross-jurisdictional activity, which is to say precisely the institutions running the largest financial cloud estates. The FFIEC's Joint Statement on Security in a Cloud Computing Environment set out cloud risk management principles for the sector in April 2020. The OCC's Cybersecurity and Financial System Resilience Report of June 2026, filed under the Consolidated Appropriations Act, 2021, restates operational resilience and supply chain risk as supervisory priorities.
+
+The data-plane trust gap is a direct path to violating the integrity those documents are written to protect. Treating it as a matter of security hygiene understates what is at stake.
+
+## What should engineers do differently?
+
+Treat IAM authorization and workload authentication as separate problems requiring separate controls. An IAM policy that permits a role is not a substitute for a cryptographic assertion that the calling workload is who it claims to be.
+
+Concretely: verify SPIFFE SVIDs at the receiving workload rather than trusting the mesh to have done it; terminate mTLS at the process boundary rather than at the load balancer; apply the EC2 instance source-VPC condition keys where the service supports VPC endpoints, and document explicitly which services do not; enforce IMDSv2 with a hop limit of 1 and block metadata access at the network layer as well; and build role-assumption chain analysis into security review for every new cross-account integration.
+
+## What supervisors should ask
+
+A revised examination framework for cloud environments does not need a new theory of zero trust. It needs questions specific enough that an institution's answer either produces evidence or exposes the gap. Six would cover most of it.
+
+1. For each service-to-service call path that reaches a system of record feeding BSA reporting, what credential does the receiving service verify, and what does it verify it against?
+2. Where is mTLS terminated relative to the workload process, and what traverses the segment between the termination point and that process?
+3. Produce the role-assumption graph, including cross-account edges. Identify every path of length two or greater that terminates at an in-scope data store.
+4. Which VPC endpoint policies constrain access by workload attribute rather than by IAM principal alone, and which condition keys implement that constraint? For services that do not support VPC endpoints, what compensates?
+5. For workloads on EC2 and EKS, is IMDSv2 enforced with a hop limit of 1, and is metadata access additionally blocked at the network layer?
+6. What is the maximum credential lifetime for service-to-service authentication, and what component issues and rotates those credentials?
+
+Asking whether an institution has a zero-trust policy is not the same as asking whether its workloads verify each other's identity before exchanging data.
+
+If your institution's zero-trust documentation were handed to an engineer who had just achieved lateral movement inside your VPC, would they find anything in it that would have stopped them?
+
+_The annotated reference architecture for this article, with each boundary mapped to the NIST SP 800-207A requirement it leaves unmet and to the examination question that would surface it, is published in the aws-trust-boundaries repository under CC BY 4.0._
+
+_Written in a personal capacity. All analysis draws on public standards, public vendor documentation, and published research._`,
+  date: "2026-08-31",
+  readTime: "12 min read",
+  category: "Security",
+  tags: ["Zero Trust", "AWS", "Cloud Security", "Kubernetes", "SPIFFE", "IAM", "Compliance"],
+  mediumUrl: "https://levelup.gitconnected.com/the-trust-your-zero-trust-architecture-still-grants-6e4df5c3695b",
+  publication: "Level Up Coding",
+},
+{
+  id: "your-ml-platform-is-serving-itself",
+  title: "Your ML Platform Is Serving Itself",
+  seoTitle: "Is Your ML Platform a Bottleneck? A 2-Hour Audit to Find Out",
+  excerpt: "Internal ML platforms drift toward serving the team that built them. Here's how the inversion happens, why adoption metrics never catch it, and a four-step audit that tells you more than your dashboards ever will.",
+  content: `![Your ML Platform Is Serving Itself](https://miro.medium.com/v2/resize:fit:1024/1*pnMcJAvf9bZvs7a6QES0-g.jpeg)
+
+*Is your ML platform becoming a bottleneck instead of an accelerator?*
+
+You set a budget for it, formed a special team to work on it, assigned it a name, created a roadmap, and provided it with a Confluence space containing seventeen pages of onboarding documentation. Yet at some point between the first internal demonstration and the fourth quarterly planning cycle, your ML platform simply ceased to serve the people for whom it had been built and began serving itself instead.
+
+This isn't a skill problem. The teams building internal ML platforms are usually the strongest engineers in the company. The issue is structural in nature and gradually worsens until a senior data scientist decides to resign, a product deadline is delayed by three sprints, or finally someone speaks up and says out loud what all the others have been thinking: "It's quicker just to carry out this task outside the platform."
+
+## The Inversion Nobody Audits
+
+The situation worth looking at is that internal ML platforms are generally tailored to the team that developed them rather than to those who use them. This is not intentional — it's more like a natural tendency. Platform engineers tend to design systems in accordance with their own mental models, operational limitations, and their idea of what is "correct". As a result, the platform ends up reflecting their priorities.
+
+What starts as a well-intentioned abstraction layer — "we'll handle the infrastructure so data scientists can focus on modeling" — gradually accumulates:
+
+- Mandatory approval gates for model registration that require platform team review
+- Opinionated SDK wrappers that abstract away just enough to make debugging painful
+- Standardized container templates that work perfectly for 80% of use cases and create week-long blockers for the other 20%
+- Centralized feature stores with ingestion pipelines that only the platform team fully understands
+
+*The more enterprise-grade the platform becomes, the more it begins to look like the traditional IT ticketing systems that MLOps was meant to replace; you've simply exchanged one form of bureaucracy for a more attractive one.*
+
+The right question isn't "Does our platform have good coverage?" Rather, it is: **Where does cognitive load go when a data scientist encounters a problem?** If the answer is "onto the practitioner, not onto the platform", you have an inversion problem.
+
+## What the Metrics Won't Tell You
+
+Usually platform teams assess adoption (the number of models registered), reliability (uptime and pipeline success rates), and velocity (deployment frequency). Such metrics are reasonable but also dangerously incomplete.
+
+Consider what they miss:
+
+- **Time-to-first-experiment:** How long does it take a new machine learning practitioner to carry out their first meaningful experiment on your platform? If the response requires reading a 40-page onboarding document, setting up three CLI tools, and waiting for the IAM permissions to propagate, then you're measuring the wrong thing.
+- **Workaround rate:** The proportion of teams that carry out experiments or serve models outside of the platform since the platform's process is too slow or too inflexible is rarely monitored, and from my experience it is almost always greater than leaders suppose.
+- **Escalation frequency:** The number of Slack messages per week that the platform team gets which begin with "quick question" but are in fact blockers is a leading indicator of abstraction failure.
+
+A fintech engineering organization I spoke with found that their data science team was maintaining two parallel environments — the official one, used for anything that had to undergo a compliance review, and a more loosely controlled AWS account for everything else. The platform team had no knowledge of the shadow environment, and the data science team had ceased requesting new features, as they no longer expected them to arrive in time to be relevant.
+
+It is worth being precise about what that story actually is. A shadow environment is a design signal, but it is also an audit finding. If any of that work touched regulated data or fed a model that made decisions about customers, the platform team's lack of visibility was itself the risk, however reasonable the data science team's motives were.
+
+The point to establish before you begin eliminating friction is that part of what practitioners perceive as bureaucracy is actually model risk management, and this has come about because a regulator, an auditor, or a previous incident required it. The approval checkpoints concerning the registration of models in lending or fraud situations do not mean that the platform team is exercising control. A useful way to assess this is to consider whether a given step results in a record that someone outside your organization could request to see; if it does, then your responsibility is to ensure that this record is produced quickly, automatically, and in a clear format, not to make the step optional. If it does not, the step should be considered for removal and treated as such.
+
+## The Cognitive Load Redistribution Trap
+
+A good platform engineering approach helps reduce the cognitive load. What usually takes place, however, is a redistribution — the complexity does not go away; it just shifts.
+
+A self-service feature pipeline might eliminate the need for data scientists to write Spark jobs. But if the pipeline's configuration requires an understanding of a custom YAML schema which has seventeen optional fields, three of which interact in non-obvious ways, you're shifting the complexity from the code over to the configuration. That isn't simplification; it's merely translation.
+
+The same thing happens with model serving. It is reasonable to abstract Kubernetes from the data scientists. However, if your internal serving abstraction forces them to understand your platform's resource quota model, your specific autoscaling annotations, and a deployment manifest format that differs from both the native Kubernetes format and any publicly available documentation — then you have established a proprietary knowledge silo that deepens over time.
+
+\`\`\`yaml
+# What your platform team designed:
+serving:
+  model_ref: "registry://fraud-detection/v3.2"
+  scaling_profile: "adaptive-p95"
+  resource_tier: "ml-standard-4"
+  canary_weight: 10
+  rollback_policy: "auto-p99-threshold"
+
+# What the data scientist needed to understand to write this:
+# - Your internal registry URI scheme
+# - Four scaling profiles and when to use each
+# - Six resource tiers and their actual CPU/memory mappings
+# - Your canary traffic routing implementation
+# - Your custom rollback threshold logic
+\`\`\`
+
+Every piece of institutional knowledge your platform requires is a tax on everyone outside the platform team.
+
+## How to Audit Your Own Platform
+
+Before you have your next look at the platform roadmap, carry out this exercise; it will take two hours and will tell you more than your adoption metrics ever will.
+
+**Step 1 — The Stranger Test:** Ask a person who became a member of the organization within the last six months to take a model from a Jupyter notebook to a production endpoint using only the provided platform documentation. Watch them without interfering and record each time they pause, check Slack, or ask a question.
+
+**Step 2 — The Escape Hatch Inventory:** Ask three senior data scientists to provide a list of all the instances in the past quarter when they had to work around the platform rather than using it. Don't make this seem punitive — instead present it as part of a design audit. The answers will be enlightening.
+
+**Step 3 — The Ticket Taxonomy:** Retrieve the support requests from the last 90 days and classify them. Whenever more than 30% of the requests are different versions of "how do I do X even though it should be basic", then your abstraction layer has a comprehension gap.
+
+**Step 4 — The Deprecation Question:** Find out from your platform team what features they would get rid of if they had the chance. Features that nobody uses but everyone has to work around are an example of accumulated debt that does not appear in technical debt reviews.
+
+This audit does not result in any blame being assigned; rather, it sends out a prioritization signal. What friction points are causing the greatest diversion of energy away from real ML work?
+
+## From Gatekeeper Back to Accelerator
+
+It's worthwhile, before the fixes are implemented, explaining why this problem persists. Inversion is seldom a failure of intention; rather, it is the result of the incentives in place. The platform teams are financed and assessed based on delivering their roadmaps: the features being released, the migrations finished, and the workloads being brought on board. Almost none of these criteria take into account how long it takes a practitioner to get their first model into production, and none of them pick up on work that has simply disappeared from the platform. Until a practitioner's experience is reflected in the platform team's performance metrics, the audit I referred to above will show what the issue is but will make no difference. This is a matter of leadership, not of engineering.
+
+Getting back isn't about doing a platform rewrite; it's about having a philosophical reset.
+
+The most effective ML platforms I've seen share a few characteristics that have nothing to do with the technology stack:
+
+- **The company regards data scientists as their main customer** rather than as a secondary stakeholder. The platform roadmaps are based on practitioners' difficulties, not on the platform team's intuitions. This seems obvious but is seldom put into practice.
+- **They intentionally include ways of escaping.** Instead of making all workloads go through a single abstraction, they set up a "golden path" for typical cases and ensure it is really easy to move down to lower-level primitives when necessary. The aim is to make the correct approach easy, not to make the incorrect one impossible.
+- **They measure time-to-value, not just uptime.** A platform that is 99.9% available but still takes three weeks to onboard a new model type is not high-performing. While reliability is necessary, it by itself is not enough.
+- **They have embedded office hours, not just providing documentation.** Although asynchronous documentation is valuable, it is through synchronous feedback sessions — in which platform engineers sit with practitioners and observe them working — that abstraction failures can be detected before they become workarounds.
+
+The aim has always been to get better models to market more quickly while experiencing fewer production incidents. The platform was merely a method of achieving this; if it's starting to become the main objective, that should be discussed during your next leadership meeting.
+
+What I'd like to leave you with is this: when was the last time you sat down with a data scientist and watched them try to use your platform without any assistance? Not a demonstration and not a guided tour — just watch them.
+
+If it has gone past a quarter, then that should be your starting point.
+
+What is the greatest source of annoyance that your ML platform causes for your practitioners at the moment — and how did you work it out?`,
+  date: "2026-08-28",
+  readTime: "8 min read",
+  category: "Engineering",
+  tags: ["MLOps", "Platform Engineering", "Machine Learning", "Developer Experience", "Engineering Leadership", "Cognitive Load"],
+  mediumUrl: "https://medium.com/the-applied-engineer/your-ml-platform-is-serving-itself-9bdcabd23cdb",
+  publication: "The Applied Engineer",
+},
+{
+  id: "thoughtworks-tech-radar-vol-34-what-actually-matters",
+  title: "Thoughtworks Tech Radar Vol. 34: What Actually Matters",
+  seoTitle: "Thoughtworks Tech Radar Vol. 34: What Actually Matters in 2026",
+  excerpt: "The Hold ring is gone, replaced by Caution. Context engineering moved to Adopt, LangGraph moved out, and MCP-by-default is now something to think twice about. Here's what the April 2026 radar says about putting coding agents on a leash.",
+  content: `![Thoughtworks Technology Radar Vol. 34](https://miro.medium.com/v2/resize:fit:1024/1*rOiUnD82olgsgvKzET2tuQ.png)
+
+The April 2026 radar just came out. The "Hold" ring is gone, replaced by "Caution." The whole document tackles one question: how do you evaluate technology when AI evolves faster than you can assess it?
+
+## Context Engineering Is Now Foundational
+
+Context engineering moved to Adopt, not just as an optimization trick, but as an architectural concern. Teams are shifting from cramming everything into large context windows to using **progressive context disclosure**: starting with a lightweight index and pulling in only what's relevant.
+
+Three areas are developing quickly: prompt caching for static instructions, dynamic retrieval loading only necessary MCP servers, and **context graphs** modeling institutional reasoning as queryable data. Treating AI context as a static text box leads to hallucinations.
+
+## Putting Agents on a Leash
+
+The idea of a "coding agent harness" runs throughout the document.
+
+**Feedforward controls include:** Agent Skills (modular, just-in-time instructions), spec-driven development frameworks, and curated shared instructions tied to service templates.
+
+**Feedback controls involve:** compilers, linters, and test suites integrated into agent workflows. These trigger auto-correction before human review. Tools like cargo-mutants, WuppieFuzz, and CodeScene fit here.
+
+The **feedback flywheel** connects everything — it's basically retrospectives for your coding agent setup.
+
+## Adopt Now
+
+**Claude Code** — Used daily in production delivery. CLI agent benchmark. Pair it with curated instructions and rigorous review.
+
+**Cursor** — Default choice alongside Claude Code. Many developers prefer supervising agents within an IDE.
+
+**Passkeys** — 15 billion eligible accounts globally. NIST classifies synced passkeys as AAL2-compliant. Avoid SMS OTP fallbacks.
+
+**Zero trust architecture** — Essential for agent deployments. Practice least privilege, continuous monitoring, and use SPIFFE for identity.
+
+**DORA metrics** — If lead times don't decrease, faster code generation doesn't guarantee better results. Keep an eye on rework rate.
+
+**Apache Iceberg** — Fundamental for technology-agnostic lakehouse architectures. Supported by all major providers.
+
+**React Native** — New architecture addressed bridge bottlenecks. It's the main recommendation for cross-platform mobile.
+
+**Svelte** — No longer a niche option. It offers small bundles, strong performance, and a simpler component model. A credible alternative to React/Vue.
+
+## Trial — Worth Pursuing
+
+**Agent Skills** — Modular context loading. One reason teams rethink MCP-by-default.
+
+**Mutation testing** — The most honest sign of test quality. AI generates "perpetually green" tests, and mutation testing can catch these.
+
+**Sandboxed execution for coding agents** — A sensible default. Use Dev Containers for ephemeral setups, and Sprites for persistent state.
+
+**Graphiti** — A temporal knowledge graph for LLM memory. It tracks how facts change over time, showing 18.5% accuracy improvements in benchmarks.
+
+**LangGraph** — Moved OUT of Adopt. The stateful-graph approach isn't always the right fit. Simpler patterns often yield leaner systems.
+
+## Caution — Think Twice
+
+**Agent instruction bloat** — AGENTS.md files can accumulate and conflict. Models may overlook buried content. Be selective.
+
+**Codebase cognitive debt** — The gap between what your system does and what your team understands is widening. AI speeds this up.
+
+**Coding throughput as productivity** — Counting lines of code and pull requests creates floods of poorly aligned code. It's better to focus on first-pass acceptance rates.
+
+**MCP by default** — A good CLI often suffices. Use MCP only when you need protocol-level interoperability.
+
+**Coding agent swarms** — Using many agents dynamically. Successful examples relied on detailed specs and thorough tests, which is not typical in product development.
+
+## Monday Morning Takeaways
+
+**Engineer your context** — use progressive disclosure, not everything at once.
+
+**Harness your agents** — apply feedforward and feedback controls.
+
+**Measure what matters** — focus on DORA metrics and first-pass acceptance, not just lines of code.
+
+**Security is essential** — maintain zero trust, use sandboxed execution, and conduct toxic flow analysis.
+
+**Don't default to MCP** — a good CLI often suffices.
+
+The tools changed again. The principles remain the same.
+
+_Source: [Thoughtworks Technology Radar Vol. 34, April 2026](https://www.thoughtworks.com/en-us/radar)_`,
+  date: "2026-04-28",
+  readTime: "5 min read",
+  category: "AI",
+  tags: ["AI", "Tech Radar", "Thoughtworks", "Coding Agents", "Software Engineering", "DevOps", "Context Engineering"],
+  mediumUrl: "https://levelup.gitconnected.com/thoughtworks-tech-radar-vol-34-what-actually-matters-a0559f45ec5a",
+  publication: "Level Up Coding",
+},
+{
+  id: "notebooklm-turns-documents-into-answers",
+  title: "The AI Tool That Actually Makes Your Documents Useful",
+  seoTitle: "Why NotebookLM Is About to Change How You Work With Documents",
+  excerpt: "NotebookLM only knows what you teach it — your PDFs, your notes, your docs — and it cites every claim. Here's what makes Google's research assistant different, and how to get your first notebook running in ten minutes.",
+  date: "2026-01-25",
+  readTime: "6 min read",
+  category: "AI",
+  tags: ["AI", "NotebookLM", "Google", "Gemini", "Productivity", "Documentation", "Research"],
+  mediumUrl: "https://zagran.medium.com/the-ai-tool-that-actually-makes-your-documents-useful-why-notebooklm-is-about-to-change-everything-1828c14f4ecc",
+  content: `Imagine having a research assistant who never forgets, always cites sources, and can turn your messy pile of documents into actionable insights in minutes. That's not science fiction — it's NotebookLM, and it's free.
+
+![NotebookLM overview](https://miro.medium.com/v2/resize:fit:1024/1*TrJnqYV4lazdxunEbbsnoQ.png)
+
+Remember the last time you needed to find that one crucial detail buried somewhere in dozens of PDFs, meeting notes, and Google Docs? Or when you had to write a report synthesizing information from multiple sources, spending hours jumping between documents?
+
+Those days are ending.
+
+Google's NotebookLM is quietly revolutionizing how we work with information, and the opportunities it's creating are genuinely exciting. This isn't another AI tool that gives you generic answers — it's your personal research assistant that works exclusively with *your* documents and *your* data.
+
+![NotebookLM interface](https://miro.medium.com/v2/resize:fit:1024/1*KA2_7_Zd5P4qgUwdjX-XIw.png)
+
+## What Makes This Different (And Why You Should Care)
+
+Here's the game-changer: NotebookLM only knows what you teach it. Upload your documents, and it becomes an expert on exactly that content — no more, no less. When it answers your questions, it cites specific sources. When it creates summaries, you can verify every claim.
+
+This solves the biggest problem with AI tools: trust. You're not getting hallucinated facts or generic responses. You're getting insights derived specifically from your materials, with receipts.
+
+## The Magic Happens in the Studio
+
+NotebookLM's "Studio" feature is where things get exciting. It can take your boring documents and transform them into:
+
+**Podcast-Style Conversations:** Upload your research papers, and two AI hosts will have a natural discussion about your content. It sounds almost too good to be true until you hear it — they debate key points, ask clarifying questions, and make connections you might have missed.
+
+**Interactive Study Guides:** Perfect for learning new topics or onboarding team members. The AI creates quizzes, flashcards, and Q&A sessions based on your materials.
+
+**Professional Presentations:** Need slides for Monday's meeting? Upload your project documents, and NotebookLM generates a structured presentation with your key points organized logically.
+
+**Data Tables:** The newest feature extracts structured information from messy documents and creates clean tables you can export to Google Sheets. Meeting transcripts become action item lists. Research papers become comparison charts.
+
+## Real People, Real Results
+
+The use cases emerging from early adopters are genuinely inspiring:
+
+**Sarah, a marketing manager,** uploads competitor websites and product docs to NotebookLM. In 10 minutes, she has a comprehensive competitive analysis that used to take her team days to compile.
+
+![Studio features](https://miro.medium.com/v2/resize:fit:1024/1*zTGp13ZYx7oeB3TexsHKJg.png)
+
+**Dr. Martinez, a university professor,** creates course notebooks with all semester readings. Students can ask specific questions about assignments and get answers that cite exact page numbers from their textbooks.
+
+**Jake's startup team** uploads all their pitch decks, market research, and investor feedback. When preparing for the next funding round, they ask NotebookLM to identify gaps in their story and generate talking points that address previous investor concerns.
+
+**A hospital administration team** uploads policy documents and creates audio overviews that staff can listen to during commutes, making compliance training actually engaging.
+
+## The Technology That Makes It Possible
+
+Under the hood, NotebookLM runs on Google's latest Gemini 3 model, which brings dramatically improved reasoning and understanding. But here's what's really exciting: it's getting better fast.
+
+Recent updates include:
+
+- **Deep Research:** The AI can now go out and find additional sources for you, building comprehensive research reports on any topic
+- **Gemini Integration:** You can now pull your NotebookLM content directly into Google's main AI assistant for even more powerful analysis
+- **Mobile Apps:** Take your knowledge base anywhere with full iOS and Android support
+
+## Why This Matters for Everyone
+
+We're witnessing something bigger than just another productivity tool. NotebookLM represents a new way of thinking about information management:
+
+**For Students:** Instead of highlighting textbooks and hoping you remember, create interactive study systems that quiz you and explain concepts in different ways.
+
+**For Professionals:** Transform scattered project documents into a queryable knowledge base that new team members can learn from instantly.
+
+**For Researchers:** Synthesize findings from dozens of papers in minutes instead of weeks, with full citation tracking.
+
+**For Content Creators:** Turn one piece of long-form content into blog posts, social media content, newsletters, and presentations — all maintaining consistent messaging.
+
+**For Small Businesses:** Create training materials, customer onboarding guides, and internal documentation that actually gets used because it's interactive and accessible.
+
+![Knowledge base in practice](https://miro.medium.com/v2/resize:fit:1024/1*c7lHHAB85vPd1uPDJbLdgQ.png)
+
+## Getting Started: Your First Notebook
+
+The beauty of NotebookLM is how simple it is to begin:
+
+1. Go to [notebooklm.google.com](https://notebooklm.google.com) — it's free with any Google account
+2. Create your first notebook and give it a specific focus
+3. Upload 5–10 related documents (PDFs, Google Docs, web pages, even YouTube videos)
+4. Ask questions about your content and watch the magic happen
+5. Try the Studio features — generate an audio overview and prepare to be amazed
+
+Start small. Pick one project, one course, or one area of interest. Upload the relevant materials and just start asking questions. Within minutes, you'll see why people are calling this the most useful AI tool they've ever used.
+
+## The Opportunities Are Everywhere
+
+What excites me most about NotebookLM isn't just what it does today — it's what becomes possible when everyone has access to this kind of intelligence amplification.
+
+**Imagine** customer service teams with instant access to every policy document and FAQ, providing perfect answers in seconds.
+
+**Picture** sales teams with comprehensive competitive intelligence at their fingertips, ready to address any objection with cited facts.
+
+**Think about** students who can have Socratic dialogues with their textbooks, asking "what if" questions and exploring ideas interactively.
+
+**Consider** small businesses creating professional training programs without hiring expensive consultants.
+
+The democratization of advanced research and analysis capabilities is happening right now. The question isn't whether this technology will transform how we work with information — it's whether you'll be an early adopter or play catch-up later.
+
+## Why Now Is the Time to Jump In
+
+NotebookLM is still in its explosive growth phase. New features launch monthly. The integration with Google's ecosystem is deepening. And most importantly, it's free for the core functionality that most people need.
+
+This is one of those rare moments where a genuinely transformative technology is accessible to everyone. Not just big corporations with massive AI budgets. Not just tech companies with engineering teams. Everyone.
+
+The organizations and individuals who master tools like NotebookLM now will have significant advantages as AI becomes more integrated into everyday work. They'll be the ones who know how to ask better questions, create more effective workflows, and generate insights that others miss.
+
+## Your Information Advantage Starts Here
+
+![Turning documents into an advantage](https://miro.medium.com/v2/resize:fit:1024/1*G1a1Tqc_fOcm90DuCMOd9A.png)
+
+In a world where everyone has access to the same base AI models, your competitive advantage comes from how well you curate and work with your specific information. NotebookLM gives you superpowers for exactly that challenge.
+
+Your documents don't have to be passive files anymore. Your research doesn't have to live in isolation. Your expertise doesn't have to be locked in your head.
+
+With NotebookLM, all of that knowledge becomes queryable, shareable, and incredibly more useful. The future of information work is here, it's accessible, and it's waiting for you to explore what becomes possible.
+
+Ready to turn your documents into your competitive advantage? Start with one notebook. Ask one question. See what happens when your information finally works for you instead of against you.
+
+The transformation begins with that first upload.
+
+_Try NotebookLM for yourself at [notebooklm.google.com](https://notebooklm.google.com). What will you build with your first notebook?_`
+},
 {
   id: "when-one-dns-record-broke-the-internet",
   title: "When One DNS Record Broke the Internet",
@@ -21,6 +511,8 @@ export const blogPosts: BlogPost[] = [
   readTime: "8 min read",
   category: "AWS",
   tags: ["AWS", "DNS", "DynamoDB", "Cloud Resilience", "US-EAST-1", "Outage Analysis", "Infrastructure"],
+  mediumUrl: "https://medium.com/the-applied-engineer/when-one-dns-record-broke-the-internet-7f4d64e76dc6",
+  publication: "The Applied Engineer",
   content: `The $500 Million Wake-Up Call for Cloud Resilience
 
 ## Introduction
@@ -348,6 +840,8 @@ The next wave of technology is already forming. Stay curious, stay skeptical, an
   readTime: "10 min read",
   category: "AI",
   tags: ["AI", "Cloud Computing", "Software Engineering", "Machine Learning", "DevOps", "Tech Radar"],
+  mediumUrl: "https://levelup.gitconnected.com/top-10-technologies-from-thoughtworks-tech-radar-vol-33-cb5738e64499",
+  publication: "Level Up Coding",
 },
 {
   id: "aws-disaster-recovery-strategies",
@@ -455,10 +949,11 @@ The October 2025 N. Virginia Region outage (the latest at the time of writing th
 
 So, take a hard look at your critical systems. If your primary region disappeared tomorrow, would you be in a panic room trying to piece together a server from backups, or would you be sipping coffee while your failover script runs? The choice is entirely yours.
 `,
-  date: "2020-10-28",
+  date: "2025-10-28",
   readTime: "8 min read",
   category: "Cloud",
   tags: ["AWS", "Disaster Recovery", "Cloud Computing", "Cloud Engineering", "Cloud Architecture", "DevOps"],
+  mediumUrl: "https://zagran.medium.com/aws-disaster-recovery-strategies-what-to-do-when-your-region-goes-dark-55f6e3d112ab",
 },
 {
   id: "top-ai-coding-tools-transforming-development-2025",
@@ -583,6 +1078,7 @@ The future of development is not about writing every line of code yourself - it'
   readTime: "12 min read",
   category: "AI",
   tags: ["AI", "Development Tools", "Productivity", "Coding", "Future of Tech", "Software Engineering"],
+  mediumUrl: "https://zagran.medium.com/the-ai-coding-revolution-top-tools-transforming-development-in-2025-20500a08f794",
 },
 {
   id: "using-image-search-in-your-app",
@@ -678,6 +1174,8 @@ This solution significantly improves the user experience by automatically provid
   readTime: "6 min read",
   category: "Backend",
   tags: ["Python", "Google API", "Image Search", "UX", "Automation"],
+  mediumUrl: "https://medium.com/swlh/using-image-search-in-your-app-7b4f53e02c2",
+  publication: "The Startup",
 },
 {
   id: "monitoring-email-bounces-aws-ses",
@@ -746,5 +1244,7 @@ This monitoring system is essential for any production application using Amazon 
   readTime: "7 min read",
   category: "Cloud",
   tags: ["AWS", "Lambda", "SES", "DynamoDB", "SNS", "Email", "DevOps"],
+  mediumUrl: "https://medium.com/swlh/monitoring-your-email-bounces-and-bounce-rate-using-amazon-ses-lambda-sns-and-dynamodb-ce74859da18f",
+  publication: "The Startup",
 }
 ];

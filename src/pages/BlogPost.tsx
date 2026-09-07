@@ -6,12 +6,21 @@ import { Link, useParams, Navigate } from "react-router-dom";
 import { blogPosts } from "@/data/blogPosts";
 import ReactMarkdown from "react-markdown";
 import { useDocumentTitle } from "@/hooks/use-document-title";
+import { useSeo } from "@/hooks/use-seo";
+import { firstImage, DEFAULT_IMAGE } from "@/lib/seo";
 
 const BlogPost = () => {
   const { id } = useParams<{ id: string }>();
   const post = blogPosts.find((p) => p.id === id);
 
   useDocumentTitle(post ? (post.seoTitle || post.title) : "Blog Post", "");
+  useSeo({
+    path: `/blog/${id}`,
+    title: post ? post.seoTitle || post.title : "Blog Post",
+    description: post?.excerpt ?? "",
+    image: post ? post.coverImage || firstImage(post.content) || DEFAULT_IMAGE : DEFAULT_IMAGE,
+    type: "article",
+  });
 
   if (!post) {
     return <Navigate to="/blog" replace />;
@@ -85,6 +94,19 @@ const BlogPost = () => {
 
           {/* Article Footer */}
           <footer className="mt-12 pt-8 border-t border-border">
+            {post.mediumUrl && (
+              <p className="text-sm text-muted-foreground mb-6">
+                Originally published{post.publication ? ` in ${post.publication}` : ""} on{" "}
+                <a
+                  href={post.mediumUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Medium
+                </a>
+              </p>
+            )}
             <Button variant="ghost" asChild>
               <Link to="/blog">
                 <ArrowLeft className="h-4 w-4" />

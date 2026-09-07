@@ -6,9 +6,16 @@ import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
 import { useState } from "react";
 import { useDocumentTitle } from "@/hooks/use-document-title";
+import { useSeo } from "@/hooks/use-seo";
 
 const Blog = () => {
   useDocumentTitle("Articles on Software Engineering, Cloud Architecture & Fintech", "");
+  useSeo({
+    path: "/blog",
+    title: "Articles on Software Engineering, Cloud Architecture & Fintech",
+    description:
+      "Writing on cloud architecture, AI tooling, platform engineering, and fintech infrastructure — published here and in Level Up Coding, The Applied Engineer, and The Startup.",
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 

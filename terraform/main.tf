@@ -152,6 +152,18 @@ resource "aws_acm_certificate_validation" "website_cert_validation" {
   }
 }
 
+# CloudFront Function: rewrite extensionless URIs to the prerendered index.html
+# objects emitted by the vite build (see vite.config.ts prerender plugin).
+resource "aws_cloudfront_function" "rewrite_uri" {
+  count = var.enable_cloudfront ? 1 : 0
+
+  name    = "${replace(var.domain_name, ".", "-")}-rewrite-uri"
+  runtime = "cloudfront-js-2.0"
+  comment = "Rewrite /blog/foo to /blog/foo/index.html for prerendered pages"
+  publish = true
+  code    = file("${path.module}/functions/rewrite-uri.js")
+}
+
 # CloudFront Distribution
 resource "aws_cloudfront_distribution" "website_distribution" {
   count = var.enable_cloudfront ? 1 : 0
@@ -186,6 +198,11 @@ resource "aws_cloudfront_distribution" "website_distribution" {
     default_ttl            = 3600
     max_ttl                = 86400
     compress               = true
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.rewrite_uri[0].arn
+    }
   }
 
   # Additional cache behaviors for static assets

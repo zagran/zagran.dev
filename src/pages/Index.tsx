@@ -8,9 +8,12 @@ import { Link } from "react-router-dom";
 import profileImage from "@/assets/profile.png";
 import { blogPosts } from "@/data/blogPosts";
 import { useDocumentTitle } from "@/hooks/use-document-title";
+import { useSeo } from "@/hooks/use-seo";
+import { SITE_TITLE, SITE_DESCRIPTION } from "@/lib/seo";
 
 const Index = () => {
-  useDocumentTitle("Serhii Zahranychnyi — Senior Software Engineer | Building Scalable Fintech Solutions", "");
+  useDocumentTitle(SITE_TITLE, "");
+  useSeo({ path: "/", title: SITE_TITLE, description: SITE_DESCRIPTION });
   const skills = [
     {
       emoji: "🐍",

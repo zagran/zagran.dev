@@ -118,10 +118,14 @@ jobs:
         aws s3 sync ./${BUILD_OUTPUT} s3://${{ steps.tf-outputs.outputs.s3_bucket_name }} \
           --delete \
           --cache-control "max-age=31536000" \
-          --exclude "*.html"
+          --exclude "*.html" \
+          --exclude "robots.txt" \
+          --exclude "sitemap.xml"
         aws s3 sync ./${BUILD_OUTPUT} s3://${{ steps.tf-outputs.outputs.s3_bucket_name }} \
           --exclude "*" \
           --include "*.html" \
+          --include "robots.txt" \
+          --include "sitemap.xml" \
           --cache-control "max-age=0,no-cache,no-store,must-revalidate"
     
     - name: Invalidate CloudFront
