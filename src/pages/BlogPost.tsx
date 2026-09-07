@@ -5,6 +5,7 @@ import { Calendar, Clock, ArrowLeft } from "lucide-react";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { blogPosts } from "@/data/blogPosts";
 import ReactMarkdown from "react-markdown";
+import { Footer } from "@/components/Footer";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useSeo } from "@/hooks/use-seo";
 import { firstImage, DEFAULT_IMAGE } from "@/lib/seo";
@@ -116,6 +117,8 @@ const BlogPost = () => {
           </footer>
         </div>
       </article>
+
+      <Footer />
     </div>
   );
 };

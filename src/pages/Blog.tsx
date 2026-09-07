@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
 import { useState } from "react";
+import { Footer } from "@/components/Footer";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useSeo } from "@/hooks/use-seo";
 
@@ -96,6 +97,8 @@ const Blog = () => {
           )}
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 };

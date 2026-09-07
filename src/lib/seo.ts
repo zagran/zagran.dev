@@ -1,6 +1,9 @@
 // Relative import (not the "@" alias) so vite.config.ts can import this at build time.
 import { blogPosts } from "../data/blogPosts";
 
+/** Machine-readable twin of LEGAL_EFFECTIVE_DATE in src/data/legal.ts. */
+export const LEGAL_EFFECTIVE_DATE_ISO = "2026-09-07";
+
 export const SITE_URL = "https://zagran.dev";
 export const SITE_NAME = "Serhii Zahranychnyi";
 export const AUTHOR = "Serhii Zahranychnyi";
@@ -20,6 +23,8 @@ export interface RouteSeo {
   /** ISO date used for sitemap lastmod and, for articles, published time. */
   date: string;
   tags?: string[];
+  /** Sitemap priority; defaults are set in getRoutes. */
+  priority?: string;
 }
 
 /** Pulls the first markdown image out of a post body, for use as its share card. */
@@ -48,6 +53,26 @@ export function getRoutes(): RouteSeo[] {
       image: DEFAULT_IMAGE,
       type: "website",
       date: newest,
+    },
+    {
+      path: "/privacy",
+      title: "Privacy Policy | Serhii Zahranychnyi",
+      description:
+        "How zagran.dev and applications published by Serhii Zahranychnyi handle information: what is collected, why, and the choices you have.",
+      image: DEFAULT_IMAGE,
+      type: "website",
+      date: LEGAL_EFFECTIVE_DATE_ISO,
+      priority: "0.3",
+    },
+    {
+      path: "/terms",
+      title: "Terms of Service | Serhii Zahranychnyi",
+      description:
+        "The terms that govern use of zagran.dev and applications published by Serhii Zahranychnyi, including permitted use, intellectual property, and disclaimers.",
+      image: DEFAULT_IMAGE,
+      type: "website",
+      date: LEGAL_EFFECTIVE_DATE_ISO,
+      priority: "0.3",
     },
     ...blogPosts.map((post): RouteSeo => ({
       path: `/blog/${post.id}`,

@@ -143,7 +143,7 @@ ${routes
   .map(
     (route) =>
       `  <url>\n    <loc>${canonicalFor(route.path)}</loc>\n    <lastmod>${route.date}</lastmod>\n    <priority>${
-        route.path === "/" ? "1.0" : route.type === "article" ? "0.8" : "0.9"
+        route.priority ?? (route.path === "/" ? "1.0" : route.type === "article" ? "0.8" : "0.9")
       }</priority>\n  </url>`
   )
   .join("\n")}

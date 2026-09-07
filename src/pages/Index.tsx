@@ -7,6 +7,7 @@ import { LinkedinIcon, GithubIcon, Mail, BookOpen, ArrowRight, Code2, Users } fr
 import { Link } from "react-router-dom";
 import profileImage from "@/assets/profile.png";
 import { blogPosts } from "@/data/blogPosts";
+import { Footer } from "@/components/Footer";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useSeo } from "@/hooks/use-seo";
 import { SITE_TITLE, SITE_DESCRIPTION } from "@/lib/seo";
@@ -256,12 +257,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-8 border-t border-border">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} Serhii Zahranychnyi. Senior Software Engineer passionate about building innovative solutions.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };
