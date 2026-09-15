@@ -32,6 +32,20 @@ export function firstImage(content: string): string | undefined {
   return content.match(/!\[[^\]]*\]\(([^)\s]+)\)/)?.[1];
 }
 
+/**
+ * Social tags need absolute URLs, so a site-relative image path (e.g. a cover
+ * in public/articles/) is resolved against SITE_URL. External URLs pass through.
+ */
+export function absoluteImage(src: string | undefined): string | undefined {
+  if (!src) return undefined;
+  return /^https?:\/\//.test(src) ? src : `${SITE_URL}${src.startsWith("/") ? "" : "/"}${src}`;
+}
+
+/** The share image for a post: explicit cover, else first body image, else the default. */
+export function shareImage(post: { coverImage?: string; content: string }): string {
+  return absoluteImage(post.coverImage) ?? absoluteImage(firstImage(post.content)) ?? DEFAULT_IMAGE;
+}
+
 /** Every route the site can serve, with the metadata its <head> should carry. */
 export function getRoutes(): RouteSeo[] {
   const newest = blogPosts.map((post) => post.date).sort().reverse()[0];
@@ -78,7 +92,7 @@ export function getRoutes(): RouteSeo[] {
       path: `/blog/${post.id}`,
       title: post.seoTitle || post.title,
       description: post.excerpt,
-      image: post.coverImage || firstImage(post.content) || DEFAULT_IMAGE,
+      image: shareImage(post),
       type: "article",
       date: post.date,
       tags: post.tags,

@@ -62,7 +62,7 @@ npm run preview
 - `src/data/` - Data files (blogPosts.ts contains blog content, legal.ts contains policy text)
 - `src/lib/` - Utility functions (utils.ts with cn helper, seo.ts with route metadata)
 - `src/hooks/` - Custom React hooks (use-document-title.ts for titles, use-seo.ts for canonical/social tags)
-- `public/` - Files copied to dist/ verbatim (robots.txt, og-image.jpg)
+- `public/` - Files copied to dist/ verbatim (robots.txt, og-image.jpg, articles/ cover images)
 - `terraform/functions/` - CloudFront function source (rewrite-uri.js)
 
 `Footer` is shared across Index, Blog, BlogPost, and the legal pages. It is not
@@ -99,6 +99,9 @@ Posts are ordered newest-first in the array. When adding one:
   rewrite keys off "no dot in the last path segment", so a dotted slug would be
   served as a file and never reach the page. The build fails loudly if you try.
 - The first markdown image in `content` becomes the article's social share image.
+  Self-hosted covers go in `public/articles/` and are referenced as
+  `/articles/<name>.jpg`; `shareImage()` in `src/lib/seo.ts` resolves relative
+  paths against `SITE_URL`, since social tags need absolute URLs.
 
 Most articles are also published on Medium. Those were published there natively,
 so Medium holds the canonical URL. To keep future articles canonical on this

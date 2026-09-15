@@ -15,6 +15,119 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
 {
+  id: "cat-clock-synchronization-on-aws",
+  title: "CAT Clock Synchronization on AWS: An Evidence Problem, Not an Accuracy Problem",
+  seoTitle: "CAT Clock Sync on AWS: Why Evidence Matters More Than Accuracy",
+  excerpt: "FINRA keeps your clock-synchronization logs two years longer than the trades they timestamp. That asymmetry tells you what Rule 6820 is actually built around, and why elastic AWS infrastructure turns a solved accuracy problem into an unsolved evidence problem.",
+  content: `![Concentric time-distribution rings radiating from a server rack](/articles/cat-clock-sync.jpg)
+
+There is an asymmetry in the CAT recordkeeping rules that is easy to miss.
+
+The order and trade records you report to CAT are preserved under SEC Rule 17a-4(b): three years, the first two in an easily accessible place. The logs proving your clocks were synchronized when you generated those timestamps are preserved under FINRA Rule 6820 for **not less than five years**.
+
+The evidence about the timestamps outlives the timestamps by two years. That is not an accident of drafting. It tells you what the rule is actually built around, and it is not clock accuracy.
+
+## Where the numbers actually live
+
+The 50 millisecond figure is usually attributed to the wrong instrument. SEC Rule 613 does not specify a tolerance. Rule 613(d)(1) requires business clocks to be synchronized to NIST "consistent with industry standards" and delegates the number to the NMS plan.
+
+The number lives in Section 6.8 of the CAT NMS Plan: Participants within 100 microseconds, Industry Members within 50 milliseconds, clocks used solely for Manual Order Events and Allocation Reports within one second.
+
+FINRA Rule 6820 makes it a membership obligation and adds the operational detail: synchronize every business day before market open, check against NIST throughout the day, document the synchronization procedures, keep a log of synchronization times and results, and retain that log for five years. Regulatory Notice 17-09 adds that Participants expect those intra-day checks at "pre-determined intervals."
+
+Rule 6820 also defines what the tolerance has to cover, which matters later. Three components: the difference between the NIST clock and the business clock, the transmission delay from the source, and the drift of the business clock.
+
+Two more instruments complete the picture. Rule 6865 sets a pattern-or-practice violation standard rather than strict liability. And CAT Alert 2020-02 establishes self-reporting, with an annual Clock Synchronization Certification due March 15 on top.
+
+Count the obligations. Synchronize, check, document, log, retain, certify, self-report. One of those is about accuracy. The rest are about producing and keeping evidence.
+
+## The cloud is not the accuracy problem
+
+It is worth being precise here, because the lazy version of this argument is that cloud clocks are unreliable. They are not.
+
+The Amazon Time Sync Service link-local NTP endpoint at 169.254.169.123 documents an error bound in the low hundreds of microseconds. In a precision time placement group, AWS documents \`chronyc tracking\` output showing Stratum 2 against a stratum-1 reference with a bound around 91 microseconds. Since November 2023, expanded repeatedly through 2026, Nitro instances can expose a PTP Hardware Clock through the ENA driver: a stratum-0 reference source, nanosecond hardware timestamps, and a documented bound around 5 microseconds.
+
+Five microseconds against a 50 millisecond tolerance is four orders of magnitude of headroom.
+
+The industry baseline agrees that accuracy was never the binding constraint. The 2017 CAT Clock Synchronization Assessment collected 143 substantially complete survey responses, found roughly 64 percent already synchronizing tighter than 50 milliseconds, measured average Participant matching engine drift around 36 microseconds, and concluded that amending the standard was not necessary.
+
+One architectural note. If tolerance budget matters for a new workload, the PTP Hardware Clock is the primary answer, not a monitoring afterthought. Section 6.8 does not mandate NTP, and PTP under IEEE 1588 is a recognized industry-standard protocol. Monitoring goes on top of a good clock, not in place of one.
+
+## What changes in an elastic deployment
+
+FINRA's 2026 Annual Regulatory Oversight Report lists clock synchronization under Effective Practices, not Findings. The practice it describes is worth reading closely:
+
+> When relying on third-party, non-broker-dealer vendors for synchronization of business clocks, obtaining synchronization logs daily from such parties and reviewing them to ensure that the clock drifts are within acceptable thresholds (i.e., 50 milliseconds).
+
+That practice assumes a counterparty. You depend on someone else's clock, so you ask them for their logs.
+
+A cloud time service does not have that shape. AWS documents its time architecture thoroughly and exposes a measurable error bound on every instance, but it does not issue a per-instance, per-session attestation you retain for five years and hand to an examiner. There is no daily log to obtain and no vendor to request it from.
+
+So the record has to be generated locally rather than obtained. On long-lived hardware you own and log, that happens more or less by default. On instances that exist for hours, it has to be designed deliberately, and the design has to outlive the instance that produced it.
+
+That is the whole argument. Not that the clocks are bad. That the evidence trail has to be built rather than collected.
+
+## Measure maximum clock error, not offset
+
+Most clock monitoring reports the System time offset from \`chronyc tracking\`, sometimes with RMS offset. Neither is the right number.
+
+System time is the offset between chronyd's internal virtual clock and the system clock. RMS offset is a long-term average. What you want is chrony's own documented bound on total error:
+
+\`\`\`
+clock_error <= |system_time_offset| + root_dispersion + (0.5 * root_delay)
+\`\`\`
+
+Compare those three terms to Rule 6820's definition of what the tolerance must cover: the NIST-to-business-clock difference, the transmission delay from the source, and the clock's drift. The correspondence is not exact, since root delay and dispersion accumulate back to the stratum-1 root rather than to NIST directly, but it is much closer than a bare offset reading.
+
+One point of terminology, because it affects configuration. Chrony's **root distance** is a narrower quantity, defined as \`root_delay / 2 + root_dispersion\`, without the offset term. Maximum clock error is what you log. Root distance is what the \`maxdistance\` directive gates on.
+
+Which leads to a trap worth knowing about. \`maxdistance\` is widely published as a drift alarm. It is not. It sets the maximum root distance for a source to be **acceptable for synchronization**, and sources above it are rejected. The default is 3 seconds. Setting it to something that sounds like a CAT margin, say 40 milliseconds, can silently reject public references whose root distance exceeds that, collapsing a deliberately redundant configuration to a single source. It is the opposite of the intended effect, and it fails quietly.
+
+## Three thresholds, not one
+
+A single alarm below 50 milliseconds is the common design, and it does not cover the obligations. CAT Alert 2020-02 implies three:
+
+1. **The compliance line, 50 milliseconds.** Out of tolerance under Section 6.8 and Rule 6820. Alarm below it, with margin.
+2. **The self-report line.** Twice the standard, so 100 milliseconds for ordinary systems, and 2 seconds for systems recording Manual Order Events. Crossing it creates a filing obligation, due by T+3 at 8:00 a.m.
+3. **The occurrence counter.** Ten deviations in one rolling 24-hour period, which creates the same filing obligation as one large excursion. Ten brief excursions, each individually trivial, get you there.
+
+The third is stateful, which is why it cannot live in \`chrony.conf\` and why per-sample alarming cannot see it. It needs a rolling window that survives process and container restarts.
+
+It also raises a genuine interpretive question on elastic infrastructure. The Alert frames the counter "on a given device or server," language that predates autoscaling groups by some margin. Counting strictly per host produces an obviously unhelpful result when hosts live for twenty minutes. Aggregating across instances that share a logical business clock identity is the conservative reading, and worth confirming with your own compliance function rather than assuming either way.
+
+## It is a node agent, not a sidecar
+
+A design detail that fails silently. \`chronyc\` connects to chronyd in a fixed order: the Unix socket at \`/var/run/chrony/chronyd.sock\`, then 127.0.0.1, then \`[::1]\`, both on port 323.
+
+A sidecar container in an ECS task under \`awsvpc\`, or a second container in a Kubernetes pod, shares a network namespace with its siblings but not with the host, and has its own mount namespace. It reaches none of the three. The call fails, and an agent that treats a failed call as a healthy zero will report perfect clocks forever.
+
+What works is a node-level agent: a DaemonSet with \`hostNetwork: true\` or the chronyd socket mounted through, or a host service on EC2. Remote monitoring over UDP 323 also works, but it needs \`bindcmdaddress\` and \`cmdallow\` set on the host, which is exactly the host configuration the sidecar model was adopted to avoid.
+
+On Fargate there is no host chronyd to query. You can still measure an offset from inside a container with an SNTP query or \`chronyd -Q\`, and in a shared-kernel environment that reading is real. What you cannot do is audit the daemon actually disciplining the clock.
+
+The clock being audited is the host's. The agent belongs on the host.
+
+## What this proves, and what it does not
+
+Here is the objection this kind of writeup usually skips.
+
+An agent querying chronyd is asking the daemon to grade itself. Every number is chronyd's estimate of its own error, derived from the sources whose correctness is the open question. If an upstream reference were wrong, or a network path asymmetric, chrony would report a small error with high confidence, and the artifact would faithfully attest to a problem it cannot structurally see.
+
+Described accurately, what this produces is a continuous, timestamped, retained self-attestation. That is a reasonable match for what Rule 6820's logging requirement asks for. It is not independent verification, and an artifact that claims to be independent verification is worse than one that does not, because the overclaim is the first thing an examiner finds.
+
+Independent verification needs a second disciplined reference on a different path: a GPS-referenced appliance, a PTP Hardware Clock cross-checked against the NTP endpoint with the difference recorded, or two genuinely independent upstreams with alerting on divergence. None of those is exotic. And knowing you have self-attestation is a better position than believing you have verification.
+
+---
+
+*The views here are my own and do not represent my employer. Everything above is drawn from public rule texts, regulatory publications, and vendor documentation, cited below.*
+
+**Sources:** SEC Rule 613 (17 CFR 242.613); CAT NMS Plan Section 6.8; FINRA Rules 6820 and 6865; FINRA Regulatory Notice 17-09; CAT Alert 2020-02 (v1.4, February 2026); CAT Clock Synchronization Assessment (May 2017); FINRA 2026 Annual Regulatory Oversight Report, CAT section; SEC Rule 17a-4(b); AWS EC2 User Guide, precision clock and time synchronization; \`chrony.conf(5)\` and \`chronyc(1)\`.`,
+  date: "2026-09-14",
+  readTime: "8 min read",
+  category: "AWS",
+  tags: ["AWS", "FINRA", "CAT", "Compliance", "Clock Synchronization", "Chrony", "Fintech", "NTP"],
+},
+{
   id: "the-trust-your-zero-trust-architecture-still-grants",
   title: "The Trust Your Zero-Trust Architecture Still Grants",
   seoTitle: "Zero Trust in AWS: The Data-Plane Gap Examiners Never Ask About",

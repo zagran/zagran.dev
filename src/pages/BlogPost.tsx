@@ -8,7 +8,7 @@ import ReactMarkdown from "react-markdown";
 import { Footer } from "@/components/Footer";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useSeo } from "@/hooks/use-seo";
-import { firstImage, DEFAULT_IMAGE } from "@/lib/seo";
+import { shareImage, DEFAULT_IMAGE } from "@/lib/seo";
 
 const BlogPost = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,7 +19,7 @@ const BlogPost = () => {
     path: `/blog/${id}`,
     title: post ? post.seoTitle || post.title : "Blog Post",
     description: post?.excerpt ?? "",
-    image: post ? post.coverImage || firstImage(post.content) || DEFAULT_IMAGE : DEFAULT_IMAGE,
+    image: post ? shareImage(post) : DEFAULT_IMAGE,
     type: "article",
   });
 
