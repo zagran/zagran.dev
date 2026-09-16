@@ -3,6 +3,13 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import fs from "fs";
 import { componentTagger } from "lovable-tagger";
+import { blogPosts } from "./src/data/blogPosts";
+import {
+  ARTICLE_EXCERPT_CLASSES,
+  ARTICLE_PROSE_CLASSES,
+  ARTICLE_TITLE_CLASSES,
+  PRERENDER_ID,
+} from "./src/lib/article-markup";
 import {
   getRoutes,
   canonicalFor,
@@ -100,6 +107,40 @@ function renderRoute(baseHtml: string, route: RouteSeo): string {
   return html.replace("</head>", `    ${head.join("\n    ")}\n  </head>`);
 }
 
+/** Renders a post's markdown with the same renderer the page uses at runtime. */
+async function renderMarkdown(markdown: string): Promise<string> {
+  const { createElement } = await import("react");
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  const { default: ReactMarkdown } = await import("react-markdown");
+  return renderToStaticMarkup(createElement(ReactMarkdown, null, markdown));
+}
+
+/**
+ * The article, as static HTML, for clients that never run the bundle: social
+ * crawlers, search engines, and importers like Medium's Import Story - which
+ * fails outright on a page whose body is just an empty #root div.
+ *
+ * main.tsx removes this node before mounting React, so it is a placeholder,
+ * not a second copy of the article. It mirrors <BlogPost>'s structure and
+ * reuses its class strings so the swap is not visible.
+ */
+async function articleBody(post: (typeof blogPosts)[number]): Promise<string> {
+  const content = await renderMarkdown(post.content);
+  return [
+    `<div id="${PRERENDER_ID}" class="min-h-screen bg-background">`,
+    `  <article class="pt-24 pb-16 px-4 sm:px-6 lg:px-8">`,
+    `    <div class="container mx-auto max-w-4xl">`,
+    `      <header class="space-y-6 mb-12">`,
+    `        <h1 class="${ARTICLE_TITLE_CLASSES}">${escapeAttr(post.title)}</h1>`,
+    `        <p class="${ARTICLE_EXCERPT_CLASSES}">${escapeAttr(post.excerpt)}</p>`,
+    `      </header>`,
+    `      <div class="${ARTICLE_PROSE_CLASSES}">${content}</div>`,
+    `    </div>`,
+    `  </article>`,
+    `</div>`,
+  ].join("\n");
+}
+
 /**
  * Emits a real HTML file per route with its own canonical/OG/JSON-LD, plus
  * sitemap.xml. Social crawlers don't run JS, so these tags have to be static.
@@ -110,7 +151,7 @@ function prerender(): Plugin {
   return {
     name: "prerender-routes",
     apply: "build",
-    closeBundle() {
+    async closeBundle() {
       const dist = path.resolve(__dirname, "dist");
       const baseHtml = fs.readFileSync(path.join(dist, "index.html"), "utf-8");
       const routes = getRoutes();
@@ -126,8 +167,16 @@ function prerender(): Plugin {
         );
       }
 
+      const postsById = new Map(blogPosts.map((post) => [`/blog/${post.id}`, post]));
+
       for (const route of routes) {
-        const html = renderRoute(baseHtml, route);
+        let html = renderRoute(baseHtml, route);
+
+        const post = postsById.get(route.path);
+        if (post) {
+          html = html.replace("</body>", `    ${await articleBody(post)}\n  </body>`);
+        }
+
         const outPath =
           route.path === "/"
             ? path.join(dist, "index.html")

@@ -9,6 +9,11 @@ import { Footer } from "@/components/Footer";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useSeo } from "@/hooks/use-seo";
 import { shareImage, DEFAULT_IMAGE } from "@/lib/seo";
+import {
+  ARTICLE_EXCERPT_CLASSES,
+  ARTICLE_PROSE_CLASSES,
+  ARTICLE_TITLE_CLASSES,
+} from "@/lib/article-markup";
 
 const BlogPost = () => {
   const { id } = useParams<{ id: string }>();
@@ -59,11 +64,11 @@ const BlogPost = () => {
               </span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl font-bold text-foreground leading-tight">
+            <h1 className={ARTICLE_TITLE_CLASSES}>
               {post.title}
             </h1>
 
-            <p className="text-xl text-muted-foreground leading-relaxed">{post.excerpt}</p>
+            <p className={ARTICLE_EXCERPT_CLASSES}>{post.excerpt}</p>
 
             <div className="flex flex-wrap gap-2">
               {post.tags.map((tag) => (
@@ -75,21 +80,7 @@ const BlogPost = () => {
           </header>
 
           {/* Article Content */}
-          <div className="prose prose-lg prose-slate dark:prose-invert max-w-none
-            prose-headings:text-foreground prose-headings:font-bold
-            prose-h1:text-4xl prose-h1:mb-4 prose-h1:mt-8
-            prose-h2:text-3xl prose-h2:mb-3 prose-h2:mt-8
-            prose-h3:text-2xl prose-h3:mb-2 prose-h3:mt-6
-            prose-p:text-muted-foreground prose-p:leading-relaxed prose-p:mb-4
-            prose-strong:text-foreground prose-strong:font-semibold
-            prose-ul:my-4 prose-ul:list-disc prose-ul:pl-6
-            prose-ol:my-4 prose-ol:list-decimal prose-ol:pl-6
-            prose-li:text-muted-foreground prose-li:mb-2
-            prose-code:text-foreground prose-code:bg-secondary prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-[''] prose-code:after:content-['']
-            prose-pre:bg-secondary prose-pre:text-foreground prose-pre:p-4 prose-pre:rounded-lg prose-pre:overflow-x-auto prose-pre:my-4
-            prose-a:text-primary prose-a:no-underline hover:prose-a:text-primary/80 hover:prose-a:underline
-            prose-blockquote:border-l-primary prose-blockquote:text-muted-foreground prose-blockquote:italic
-            prose-img:rounded-lg prose-img:shadow-md">
+          <div className={ARTICLE_PROSE_CLASSES}>
             <ReactMarkdown>{post.content}</ReactMarkdown>
           </div>
 

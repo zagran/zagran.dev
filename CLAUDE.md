@@ -120,6 +120,20 @@ description, `rel=canonical`, Open Graph and Twitter tags, and JSON-LD
 (`BlogPosting` for articles, `Person` elsewhere). The same pass writes
 `sitemap.xml`.
 
+**Article bodies are prerendered too.** For `/blog/<id>` routes the plugin also
+renders the post's markdown to static HTML - through `react-markdown` and
+`renderToStaticMarkup`, the same renderer the page uses at runtime - and appends
+it as `<div id="prerender">` after the empty `#root`. `src/main.tsx` removes that
+node before mounting React, so it is a placeholder rather than a duplicate. It
+mirrors `<BlogPost>`'s structure and shares its class strings via
+`src/lib/article-markup.ts`, which both the page and `vite.config.ts` import.
+
+Metadata alone is not enough for every consumer. Anything that reads the article
+*text* without running JavaScript - Google's first indexing pass, and Medium's
+Import Story tool, which fails outright on a body that is just an empty `#root`
+div - needs this. Since Import Story is how articles here get their `rel=canonical`
+back from Medium, do not remove it.
+
 **Runtime.** `useSeo` (src/hooks/use-seo.ts) updates the canonical and social
 tags during client-side navigation. `useDocumentTitle` still owns titles; the two
 are used together on each page.
