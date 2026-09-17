@@ -48,3 +48,28 @@ export function useSeo({ path, title, description, image, type = "website" }: Se
     upsertMeta("name", "twitter:image", image ?? DEFAULT_IMAGE);
   }, [path, title, description, image, type]);
 }
+
+/**
+ * Marks the current view as noindex and drops any canonical a previously
+ * rendered route left in the head.
+ *
+ * The 404 page is what renders under every unmatched URL, so without this it
+ * would hand search engines an unbounded set of indexable pages all pointing at
+ * one canonical - which is what gets reported as duplicate content. The static
+ * /404.html carries the same robots tag for crawlers that never run this bundle.
+ */
+export function useNoIndex() {
+  useEffect(() => {
+    document.head.querySelector('link[rel="canonical"]')?.remove();
+
+    let meta = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]');
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.setAttribute("name", "robots");
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute("content", "noindex, follow");
+
+    return () => meta.remove();
+  }, []);
+}

@@ -159,7 +159,7 @@ resource "aws_cloudfront_function" "rewrite_uri" {
 
   name    = "${replace(var.domain_name, ".", "-")}-rewrite-uri"
   runtime = "cloudfront-js-2.0"
-  comment = "Rewrite /blog/foo to /blog/foo/index.html for prerendered pages"
+  comment = "Canonical host/path redirects + rewrite to prerendered index.html"
   publish = true
   code    = file("${path.module}/functions/rewrite-uri.js")
 }
@@ -241,18 +241,23 @@ resource "aws_cloudfront_distribution" "website_distribution" {
     minimum_protocol_version = "TLSv1.2_2021"
   }
 
-  # Return index.html for 404s so React Router can handle client-side routing
+  # Unmatched URLs get a real 404, not a 200 copy of the homepage. Every route
+  # the app serves is prerendered to its own object, so anything that misses is
+  # genuinely absent - answering 200 made each one an indexable duplicate.
+  # /404.html carries noindex and boots React, which renders the 404 page.
   custom_error_response {
-    error_code         = 404
-    response_code      = 200
-    response_page_path = "/index.html"
+    error_code            = 404
+    response_code         = 404
+    response_page_path    = "/404.html"
+    error_caching_min_ttl = 60
   }
 
-  # S3 returns 403 for missing files when using OAC, treat as 404
+  # S3 returns 403, not 404, for a missing object when using OAC.
   custom_error_response {
-    error_code         = 403
-    response_code      = 200
-    response_page_path = "/index.html"
+    error_code            = 403
+    response_code         = 404
+    response_page_path    = "/404.html"
+    error_caching_min_ttl = 60
   }
 
   tags = {

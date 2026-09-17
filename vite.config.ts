@@ -37,6 +37,11 @@ function setMeta(html: string, attr: "name" | "property", key: string, value: st
     : html.replace("</head>", `    ${tag}\n  </head>`);
 }
 
+/** Drops a meta tag entirely, for pages that must not inherit it from the base. */
+function dropMeta(html: string, attr: "name" | "property", key: string): string {
+  return html.replace(new RegExp(`\\s*<meta ${attr}="${key}" content="[^"]*"\\s*/?>`), "");
+}
+
 function structuredData(route: RouteSeo): string {
   const schema =
     route.type === "article"
@@ -105,6 +110,30 @@ function renderRoute(baseHtml: string, route: RouteSeo): string {
   head.push(structuredData(route));
 
   return html.replace("</head>", `    ${head.join("\n    ")}\n  </head>`);
+}
+
+/**
+ * The page CloudFront serves, with a 404 status, for every URL that has no
+ * prerendered object. It boots React like any other page - React Router renders
+ * <NotFound> for whatever path the browser is on - but it must never be indexed
+ * and must not claim a canonical, or every unmatched URL becomes a duplicate of
+ * whatever it points at. It is deliberately absent from getRoutes/sitemap.xml.
+ */
+function renderNotFound(baseHtml: string): string {
+  const title = "404 - Page Not Found | Serhii Zahranychnyi";
+  const description = "This page does not exist. Browse the articles or return to the homepage.";
+
+  let html = baseHtml;
+  html = html.replace(/<title>[^<]*<\/title>/, `<title>${escapeAttr(title)}</title>`);
+  html = setMeta(html, "name", "description", description);
+  html = setMeta(html, "name", "robots", "noindex, follow");
+  html = setMeta(html, "property", "og:title", title);
+  html = setMeta(html, "property", "og:description", description);
+  html = setMeta(html, "name", "twitter:title", title);
+  html = setMeta(html, "name", "twitter:description", description);
+  // Inherited from the base page; a 404 must not announce the homepage as its URL.
+  html = dropMeta(html, "property", "og:url");
+  return html;
 }
 
 /** Renders a post's markdown with the same renderer the page uses at runtime. */
@@ -186,6 +215,8 @@ function prerender(): Plugin {
         fs.writeFileSync(outPath, html);
       }
 
+      fs.writeFileSync(path.join(dist, "404.html"), renderNotFound(baseHtml));
+
       const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${routes
@@ -199,7 +230,7 @@ ${routes
 </urlset>\n`;
       fs.writeFileSync(path.join(dist, "sitemap.xml"), sitemap);
 
-      console.log(`prerendered ${routes.length} routes + sitemap.xml`);
+      console.log(`prerendered ${routes.length} routes + 404.html + sitemap.xml`);
     },
   };
 }

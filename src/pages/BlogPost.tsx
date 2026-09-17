@@ -2,35 +2,43 @@ import { Navigation } from "@/components/Navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, ArrowLeft } from "lucide-react";
-import { Link, useParams, Navigate } from "react-router-dom";
-import { blogPosts } from "@/data/blogPosts";
+import { Link, useParams } from "react-router-dom";
+import { blogPosts, type BlogPost as Post } from "@/data/blogPosts";
 import ReactMarkdown from "react-markdown";
 import { Footer } from "@/components/Footer";
+import NotFound from "./NotFound";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useSeo } from "@/hooks/use-seo";
-import { shareImage, DEFAULT_IMAGE } from "@/lib/seo";
+import { shareImage } from "@/lib/seo";
 import {
   ARTICLE_EXCERPT_CLASSES,
   ARTICLE_PROSE_CLASSES,
   ARTICLE_TITLE_CLASSES,
 } from "@/lib/article-markup";
 
+/**
+ * An unknown slug renders the 404 page in place. It used to redirect to /blog,
+ * which meant every stale or mistyped article URL a crawler knew about answered
+ * with a redirect instead of "gone" - reported as "Page with redirect". Keeping
+ * the lookup in a wrapper also means useSeo never runs with a slug that has no
+ * post, so no canonical is ever claimed for a URL that does not exist.
+ */
 const BlogPost = () => {
   const { id } = useParams<{ id: string }>();
   const post = blogPosts.find((p) => p.id === id);
 
-  useDocumentTitle(post ? (post.seoTitle || post.title) : "Blog Post", "");
+  return post ? <BlogPostView post={post} /> : <NotFound />;
+};
+
+const BlogPostView = ({ post }: { post: Post }) => {
+  useDocumentTitle(post.seoTitle || post.title, "");
   useSeo({
-    path: `/blog/${id}`,
-    title: post ? post.seoTitle || post.title : "Blog Post",
-    description: post?.excerpt ?? "",
-    image: post ? shareImage(post) : DEFAULT_IMAGE,
+    path: `/blog/${post.id}`,
+    title: post.seoTitle || post.title,
+    description: post.excerpt,
+    image: shareImage(post),
     type: "article",
   });
-
-  if (!post) {
-    return <Navigate to="/blog" replace />;
-  }
 
   return (
     <div className="min-h-screen bg-background">

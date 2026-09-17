@@ -118,7 +118,12 @@ per route - `dist/index.html`, `dist/blog/index.html`, `dist/blog/<id>/index.htm
 `dist/privacy/index.html`, `dist/terms/index.html` - each with its own title,
 description, `rel=canonical`, Open Graph and Twitter tags, and JSON-LD
 (`BlogPosting` for articles, `Person` elsewhere). The same pass writes
-`sitemap.xml`.
+`sitemap.xml` and `dist/404.html`.
+
+`404.html` is the page CloudFront returns, with a real 404 status, for any URL
+with no prerendered object. It carries `noindex` and deliberately has no
+`rel=canonical` or `og:url`, and it is not in `getRoutes()` or the sitemap. It
+still boots React, so React Router renders `<NotFound>` for the requested path.
 
 **Article bodies are prerendered too.** For `/blog/<id>` routes the plugin also
 renders the post's markdown to static HTML - through `react-markdown` and
@@ -136,7 +141,16 @@ back from Medium, do not remove it.
 
 **Runtime.** `useSeo` (src/hooks/use-seo.ts) updates the canonical and social
 tags during client-side navigation. `useDocumentTitle` still owns titles; the two
-are used together on each page.
+are used together on each page. `useNoIndex`, from the same file, is the 404
+page's counterpart: it adds `robots: noindex` and strips the canonical the
+previous route left behind.
+
+**Nothing may answer for a URL that does not exist.** A missing page must 404,
+never redirect and never return 200 - both register in Search Console as
+"Page with redirect" and "Duplicate without user-selected canonical". So an
+unknown `/blog/<slug>` renders `<NotFound>` in place rather than redirecting to
+`/blog`, and `BlogPost` looks the post up in a thin wrapper so `useSeo` never
+runs for a slug with no post.
 
 **Route metadata lives in one place:** `getRoutes()` in `src/lib/seo.ts`, derived
 from `blogPosts` so there is no second list to maintain. That file is imported by
@@ -161,7 +175,16 @@ Infrastructure is defined in the `terraform/` directory and deployed via GitHub 
 **The CloudFront function is what makes prerendering work.** It maps extensionless
 URIs onto the generated files (`/blog/foo` to `/blog/foo/index.html`). Paths with
 no matching object still 403 from S3 and fall through the distribution's
-`custom_error_response` to `/index.html`, where React Router renders the 404 page.
+`custom_error_response`, which serves `/404.html` with a 404 status.
+
+**It also collapses the duplicate URLs.** `www.<domain>` is an alias on the same
+distribution, and `/blog/foo/` resolves to the same object as `/blog/foo`, so
+without redirects every page is reachable at four URLs. The function 301s
+`www` to the apex and strips the trailing slash, preserving the query string. A
+function that returns a response short-circuits before the cache lookup, so
+these redirects never enter the cache key - which matters, because the
+distribution does not vary its cache on the `Host` header.
+
 The function is ES5 only - the CloudFront Functions runtime is not a full JS engine.
 
 The CI IAM user needs these CloudFront function permissions, beyond its existing
