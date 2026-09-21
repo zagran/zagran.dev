@@ -15,6 +15,126 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
 {
+  id: "fintech-101-problems-you-sign-up-for",
+  title: "FinTech 101: The Problems You Sign Up For as a Software Engineer in Finance",
+  seoTitle: "FinTech 101: 10 Problems You Sign Up For as an Engineer in Finance",
+  excerpt: "People considering a move into fintech almost always ask about the stack. That is never the interesting part. Ten things that actually change when your software handles money — requirements written by lawyers, auditors as an audience, retries that cost somebody their rent, and a domain that takes longer to learn than any framework.",
+  content: `![Cover for FinTech 101, part 1. The words "The code is the easy part." in large type on dark green, with the Systems of Record logo resting on a gold double rule.](/articles/fintech-101/01-cover.webp)
+
+*Part 1 of a series. The code is the easy part.*
+
+> **Disclaimer:** This is written in my personal capacity. The views here are my own and do not represent my employer or any company I have worked for. Nothing in this article is based on non-public information about any organization's systems, customers, or controls. Every example is generic and reflects publicly known industry practice.
+
+I have been writing software for about fifteen years. Product startups, enterprise consulting, payments, and now financial infrastructure, where I work on anti-money-laundering compliance systems running on a large cloud footprint.
+
+People ask me fairly often whether they should move into fintech. Usually they ask about the tech stack. That is almost never the interesting part. The stack is Java or Python or Go, it runs on AWS, there is Kafka somewhere, and you have seen all of it before.
+
+What actually changes is everything around the code. Here are the things I wish someone had explained to me before I started.
+
+## 1. Your requirements come from people who will never read your code
+
+In most products, a requirement comes from a product manager who talked to users. In fintech, a meaningful share of your backlog comes from a regulation, a supervisory exam finding, or a policy written by a lawyer.
+
+You will read documents that were never meant to be read by an engineer. They are long, they are cautious, and they say things like "reasonably designed to detect." Your job is to turn that into a threshold, a query, a retention period, and a set of tests.
+
+The uncomfortable truth is that two competent engineers can read the same rule and build two different systems, and both can be defensible. You get used to working without a crisp acceptance criterion, and you learn to write down your interpretation so someone can challenge it later.
+
+## 2. "It works" is not the finish line. "I can prove it worked" is
+
+In consumer products, if the feature works, you are done. In finance, you are done when you can demonstrate, a year from now, to someone who was not there, that it worked the way you said it did on a specific Tuesday in March.
+
+![Two timelines. Most software goes build, test, ship, then done. Financial software goes build, test, ship, record, retain, and prove it a year later, and only then is it done.](/articles/fintech-101/02-definition-of-done.webp)
+
+*Shipping is where most software stops. In finance, recording, retaining and proving what happened are part of the job.*
+
+That changes engineering decisions in ways that surprise people. Logs become evidence. Configuration changes need a history. Timestamps need to be trustworthy. A job that silently retried and succeeded is not automatically a happy story, because now there are two versions of what happened and you have to explain which one is real.
+
+If you have never built for an audience of auditors, this is the biggest mental shift you will make.
+
+## 3. You often cannot look at the data
+
+Debugging in fintech is like troubleshooting a car engine through a keyhole. Production data contains personal and financial information, so access is restricted, logged, and reviewed. You do not casually query the production database to see what a customer's record looks like.
+
+So you learn a different craft. You build systems that explain themselves through metrics, structured events, and safe diagnostic output. You get very good at reproducing issues with synthetic data. You write the log line you will need at 3 a.m. six months from now, because you will not be allowed to go fishing for it then.
+
+## 4. Money makes retries dangerous
+
+Every distributed systems engineer knows about retries, idempotency, and exactly-once being mostly a myth. In fintech you feel it.
+
+A duplicate analytics event is a rounding error in a dashboard. A duplicate payment is somebody's rent going out twice. A dropped message in a monitoring pipeline is an annoyance. A dropped message in a regulatory pipeline can turn into a reporting gap.
+
+The result is that a large fraction of your effort goes into reconciliation, the unglamorous work of proving that what system A believes matches what system B believes. Nobody demos reconciliation at an all-hands. It is also the thing that saves you.
+
+![A table comparing a payment service with a ledger. Three transactions match. One appears twice in the payment service, one is missing from it, and the totals, 879.50 and 611.75, do not match.](/articles/fintech-101/03-reconciliation.webp)
+
+*A retry that ran twice and a record that never arrived. Reconciliation is how you catch both.*
+
+## 5. Nothing is ever turned off
+
+Financial systems accumulate. There are file formats older than most of the people maintaining them, batch windows that exist because of decisions made decades ago, and daily cutoffs that shape your architecture more than any design document.
+
+You will rarely get to build greenfield and delete the old thing. You will run both for a long time, reconcile between them, and migrate in slices while every stakeholder asks why it is taking so long. Learning to make progress inside that constraint, instead of resenting it, is a real career skill.
+
+## 6. False positives have a human cost
+
+This one took me longest to internalize. In compliance and fraud systems, tuning is not a pure optimization problem.
+
+Loosen the logic and real risk gets through. Tighten it and you generate alerts that humans have to review one by one, and some of those alerts land on customers who did nothing wrong and now cannot access their own money. Every threshold you change has a queue of analysts on one side and a real person on the other.
+
+![A chart where rules get stricter from left to right. The line for real risk that gets through falls, the line for legitimate customers flagged rises, and a dashed line marks the chosen threshold between them.](/articles/fintech-101/04-threshold-tradeoff.webp)
+
+*No setting brings both lines to zero. Tuning means choosing who bears the cost.*
+
+I grew up in Ukraine, and watching how quickly sanctions and screening expectations can shift made something abstract feel very concrete. Geopolitics arrives in your sprint as a ticket.
+
+## 7. You are only as fast as your slowest third party
+
+Fintech runs on partners. Card networks, core banking providers, identity verification vendors, data aggregators, partner banks.
+
+Their sandbox will not behave like their production. Their documentation will be out of date. Their support will answer in three business days. Your beautiful two-week feature will wait a quarter on a contract, a certification, or an integration review. Plan your roadmap around that reality instead of pretending it is an edge case.
+
+## 8. Change is slow on purpose, and it will frustrate you
+
+Approvals, separation of duties, change records, access reviews, release freezes during peak periods. If you come from a team that deployed on Friday afternoon because why not, this feels like walking through water.
+
+Some of it genuinely is bureaucracy that has outlived its reason. A lot of it is scar tissue from real incidents that hurt real people. The engineers who do well here learn to tell the difference, and then work to automate the controls rather than argue that controls are unnecessary. Evidence that generates itself is worth more than a strong opinion in a meeting.
+
+## 9. AI raised the bar instead of lowering it
+
+Every fintech company is putting AI somewhere right now. The interesting constraint is that if a model influences a decision about a customer, somebody will eventually ask why that decision happened, and "the model said so" is not an answer.
+
+So the hard part is not wiring up an API. It is explainability, model documentation, monitoring for drift, human review, and knowing which decisions a model should not be making alone. The engineers who understand governance as well as prompting are going to be extremely valuable over the next few years.
+
+## 10. The domain is the actual learning curve
+
+You can learn a new framework in a month. Learning what a suspicious activity report is, why a settlement date matters, how a chargeback flows, or what makes a transaction "structured" takes much longer, and none of it is in the repo.
+
+Your most useful colleagues will not be engineers. They will be compliance officers, risk partners, and operations analysts who have been doing this for twenty years. Buy them coffee. Ask what breaks for them. That knowledge is what turns you from someone who implements tickets into someone who is trusted with design.
+
+![The ten points from this article, from "Requirements come from people who never read your code" to "The domain is the actual learning curve."](/articles/fintech-101/05-summary-card.webp)
+
+*All ten in one place.*
+
+## So why stay?
+
+Because the problems are real and the constraints are honest. The systems have to be correct, they have to survive being examined, and they matter to people who will never know your name. There is a certain satisfaction in that which I did not find in building yet another growth funnel.
+
+If you are considering the move, my practical advice is simple. Learn the vocabulary before the stack. Read one regulation end to end so the genre stops being intimidating. Get comfortable thinking in evidence rather than output. And make friends outside engineering.
+
+Next in FinTech 101, I want to take one of these and go deeper: what "auditability" actually means for a system you are designing this quarter, and how to build it in without turning every deploy into a paperwork exercise.
+
+If you are working in fintech, I would like to know which of these hit closest, and what I left out.
+
+---
+
+*Serhii Zahranychnyi is a Senior Software Engineer at Capital One in McLean, Virginia, working on anti-money-laundering compliance infrastructure at cloud scale. He is an AWS Certified Solutions Architect, an IEEE Senior Member, and an ACM member, and writes about applied cloud and security engineering at [zagran.dev](https://zagran.dev).*`,
+  coverImage: "/articles/fintech-101/01-cover.png",
+  date: "2026-09-20",
+  readTime: "8 min read",
+  category: "Fintech",
+  tags: ["Fintech", "Compliance", "Career", "AML", "Software Engineering", "Auditability", "Payments"],
+},
+{
   id: "cat-clock-synchronization-on-aws",
   title: "CAT Clock Synchronization on AWS: An Evidence Problem, Not an Accuracy Problem",
   seoTitle: "CAT Clock Sync on AWS: Why Evidence Matters More Than Accuracy",

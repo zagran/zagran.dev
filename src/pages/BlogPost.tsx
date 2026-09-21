@@ -11,6 +11,7 @@ import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useSeo } from "@/hooks/use-seo";
 import { shareImage } from "@/lib/seo";
 import {
+  articleMarkdownComponents,
   ARTICLE_EXCERPT_CLASSES,
   ARTICLE_PROSE_CLASSES,
   ARTICLE_TITLE_CLASSES,
@@ -89,7 +90,9 @@ const BlogPostView = ({ post }: { post: Post }) => {
 
           {/* Article Content */}
           <div className={ARTICLE_PROSE_CLASSES}>
-            <ReactMarkdown>{post.content}</ReactMarkdown>
+            <ReactMarkdown components={articleMarkdownComponents()}>
+              {post.content}
+            </ReactMarkdown>
           </div>
 
           {/* Article Footer */}

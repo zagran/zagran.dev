@@ -7,6 +7,8 @@
  * Tailwind's content globs, so the utilities actually get generated.
  */
 
+import { createElement } from "react";
+
 /** Typography classes for the rendered markdown body. */
 export const ARTICLE_PROSE_CLASSES = `prose prose-lg prose-slate dark:prose-invert max-w-none
   prose-headings:text-foreground prose-headings:font-bold
@@ -31,3 +33,30 @@ export const ARTICLE_EXCERPT_CLASSES = "text-xl text-muted-foreground leading-re
 
 /** The id of the static article node the prerender emits; main.tsx removes it. */
 export const PRERENDER_ID = "prerender";
+
+/**
+ * Markdown renderer overrides shared by <BlogPost> and the prerender, so the
+ * static HTML a crawler gets and the DOM React mounts stay identical.
+ *
+ * Article bodies run to several images and most of them sit well below the
+ * fold, so everything after the first is deferred. The first one is the cover:
+ * it is the largest contentful paint, and deferring it would delay the paint
+ * rather than save anything, so it stays eager.
+ *
+ * This is a factory because the counter has to start at zero for each render
+ * pass rather than be shared across every article ever rendered.
+ */
+export function articleMarkdownComponents() {
+  let index = 0;
+
+  return {
+    img({ node, ...props }: { node?: unknown } & Record<string, unknown>) {
+      const isCover = index++ === 0;
+      return createElement("img", {
+        ...props,
+        loading: isCover ? "eager" : "lazy",
+        decoding: "async",
+      });
+    },
+  };
+}

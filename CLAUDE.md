@@ -102,6 +102,20 @@ Posts are ordered newest-first in the array. When adding one:
   Self-hosted covers go in `public/articles/` and are referenced as
   `/articles/<name>.jpg`; `shareImage()` in `src/lib/seo.ts` resolves relative
   paths against `SITE_URL`, since social tags need absolute URLs.
+- Body images should be WebP. Diagrams and screenshots are flat-color, so
+  `cwebp -z 9 -lossless` is pixel-identical and roughly 60% smaller than the
+  PNG. Keep the original in `src/assets/articles/<slug>/` and publish the WebP
+  to `public/articles/<slug>/`.
+- **A WebP body image needs an explicit `coverImage`.** LinkedIn's crawler does
+  not reliably render WebP cards, so a post whose first body image is WebP must
+  also ship a PNG or JPEG of the cover and name it in `coverImage` -
+  `shareImage()` prefers that field over the first body image. `BlogCard` does
+  not render `coverImage`, so it only ever affects the social tags.
+- Images render through `articleMarkdownComponents()` in
+  `src/lib/article-markup.ts`, used by both `<BlogPost>` and the prerender. It
+  defers every image after the first; the first is the cover and the LCP
+  element, so it stays eager. Keep both call sites in sync or the crawler's
+  HTML and the mounted DOM drift apart.
 
 Most articles are also published on Medium. Those were published there natively,
 so Medium holds the canonical URL. To keep future articles canonical on this
