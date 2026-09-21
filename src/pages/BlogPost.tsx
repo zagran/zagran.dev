@@ -10,6 +10,7 @@ import NotFound from "./NotFound";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useSeo } from "@/hooks/use-seo";
 import { shareImage } from "@/lib/seo";
+import { formatPostDate } from "@/lib/utils";
 import {
   articleMarkdownComponents,
   ARTICLE_EXCERPT_CLASSES,
@@ -61,11 +62,7 @@ const BlogPostView = ({ post }: { post: Post }) => {
               <Badge variant="secondary">{post.category}</Badge>
               <span className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
-                {new Date(post.date).toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                })}
+                {formatPostDate(post.date)}
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />

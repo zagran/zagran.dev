@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { BlogPost } from "@/data/blogPosts";
+import { formatPostDate } from "@/lib/utils";
 
 interface BlogCardProps {
   post: BlogPost;
@@ -19,11 +20,7 @@ export const BlogCard = ({ post }: BlogCardProps) => {
             </Badge>
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              {new Date(post.date).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
+              {formatPostDate(post.date, "short")}
             </span>
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
