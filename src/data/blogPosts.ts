@@ -16,7 +16,7 @@ export interface BlogPost {
 export const blogPosts: BlogPost[] = [
 {
   id: "getting-started-with-openspec",
-  title: "Getting Started with OpenSpec: A Beginner's Guide to Spec-Driven Development (SDD)",
+  title: "Getting Started with OpenSpec: A Beginner's Guide to Spec-Driven Development",
   seoTitle: "OpenSpec Tutorial: Spec-Driven Development with Your AI Coding Agent",
   excerpt: "Your AI agent wrote the code, but the reasoning died in a chat window. OpenSpec puts the plan in your repo first \u2014 two folders, a handful of Markdown files, and a review step before anyone writes code. A complete beginner's walkthrough, from install to your first archived change.",
   content: `If you've used an AI coding assistant for more than a week, you've probably hit this wall. You explain a feature in chat, the agent writes a ton of code, and it mostly works. Then a few days later you ask for a small change, and the agent has no clue why things were built the way they were. The reasoning lived in a chat window that's now gone.
