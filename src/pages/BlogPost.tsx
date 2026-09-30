@@ -13,6 +13,8 @@ import { shareImage } from "@/lib/seo";
 import { formatPostDate } from "@/lib/utils";
 import {
   articleMarkdownComponents,
+  ARTICLE_REHYPE_PLUGINS,
+  ARTICLE_REMARK_PLUGINS,
   ARTICLE_EXCERPT_CLASSES,
   ARTICLE_PROSE_CLASSES,
   ARTICLE_TITLE_CLASSES,
@@ -87,7 +89,11 @@ const BlogPostView = ({ post }: { post: Post }) => {
 
           {/* Article Content */}
           <div className={ARTICLE_PROSE_CLASSES}>
-            <ReactMarkdown components={articleMarkdownComponents()}>
+            <ReactMarkdown
+              components={articleMarkdownComponents()}
+              remarkPlugins={ARTICLE_REMARK_PLUGINS}
+              rehypePlugins={ARTICLE_REHYPE_PLUGINS}
+            >
               {post.content}
             </ReactMarkdown>
           </div>

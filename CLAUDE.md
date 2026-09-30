@@ -111,11 +111,31 @@ Posts are ordered newest-first in the array. When adding one:
   also ship a PNG or JPEG of the cover and name it in `coverImage` -
   `shareImage()` prefers that field over the first body image. `BlogCard` does
   not render `coverImage`, so it only ever affects the social tags.
+- **Diagrams are inline SVG, not ASCII art and not a raster.** `rehype-raw` is
+  enabled, so a post body can contain real HTML. Color the SVG with the theme
+  tokens (`hsl(var(--border))`, `--card`, `--primary`, `--foreground`,
+  `--muted-foreground`) so it follows dark mode for free, size it with
+  `viewBox` plus `class="h-auto w-full max-w-[Npx]"` so it scales to the column
+  instead of scrolling on a phone, and give it `role="img"` with `<title>` and
+  `<desc>`. Wrap it in `<figure class="not-prose">`. See the change-loop
+  diagram in the OpenSpec post.
+- **Raw HTML in a post must not contain a blank line.** CommonMark ends an HTML
+  block at the first blank line, so anything after one is parsed as markdown -
+  an indented SVG body silently becomes an indented code block, and you get
+  half a diagram followed by escaped angle brackets.
+- `rehype-raw` turns off react-markdown's HTML escaping for the whole pipeline.
+  That is only safe because post bodies are authored in this repo and ship
+  through a build. If content ever comes from a reader, a CMS, or a fetch, put
+  `rehype-sanitize` in front of it first.
 - Images render through `articleMarkdownComponents()` in
   `src/lib/article-markup.ts`, used by both `<BlogPost>` and the prerender. It
   defers every image after the first; the first is the cover and the LCP
-  element, so it stays eager. Keep both call sites in sync or the crawler's
-  HTML and the mounted DOM drift apart.
+  element, so it stays eager. It also strips the trailing newline CommonMark
+  puts at the end of every fenced code block, which `white-space: pre` would
+  otherwise render as a blank final line. Remark and rehype plugins live beside
+  it as `ARTICLE_REMARK_PLUGINS` (GFM, for tables) and `ARTICLE_REHYPE_PLUGINS`.
+  Keep both call sites in sync or the crawler's HTML and the mounted DOM drift
+  apart.
 
 Most articles are also published on Medium. Those were published there natively,
 so Medium holds the canonical URL. To keep future articles canonical on this

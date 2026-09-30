@@ -6,6 +6,8 @@ import { componentTagger } from "lovable-tagger";
 import { blogPosts } from "./src/data/blogPosts";
 import {
   articleMarkdownComponents,
+  ARTICLE_REHYPE_PLUGINS,
+  ARTICLE_REMARK_PLUGINS,
   ARTICLE_EXCERPT_CLASSES,
   ARTICLE_PROSE_CLASSES,
   ARTICLE_TITLE_CLASSES,
@@ -143,7 +145,15 @@ async function renderMarkdown(markdown: string): Promise<string> {
   const { renderToStaticMarkup } = await import("react-dom/server");
   const { default: ReactMarkdown } = await import("react-markdown");
   return renderToStaticMarkup(
-    createElement(ReactMarkdown, { components: articleMarkdownComponents() }, markdown)
+    createElement(
+      ReactMarkdown,
+      {
+        components: articleMarkdownComponents(),
+        remarkPlugins: ARTICLE_REMARK_PLUGINS,
+        rehypePlugins: ARTICLE_REHYPE_PLUGINS,
+      },
+      markdown
+    )
   );
 }
 

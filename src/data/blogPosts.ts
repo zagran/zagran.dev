@@ -15,6 +15,218 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
 {
+  id: "getting-started-with-openspec",
+  title: "Getting Started with OpenSpec: A Beginner's Guide to Spec-Driven Development (SDD)",
+  seoTitle: "OpenSpec Tutorial: Spec-Driven Development with Your AI Coding Agent",
+  excerpt: "Your AI agent wrote the code, but the reasoning died in a chat window. OpenSpec puts the plan in your repo first \u2014 two folders, a handful of Markdown files, and a review step before anyone writes code. A complete beginner's walkthrough, from install to your first archived change.",
+  content: `If you've used an AI coding assistant for more than a week, you've probably hit this wall. You explain a feature in chat, the agent writes a ton of code, and it mostly works. Then a few days later you ask for a small change, and the agent has no clue why things were built the way they were. The reasoning lived in a chat window that's now gone.
+
+OpenSpec fixes that by getting the plan on paper first. You and your AI agree on what's changing in a few short Markdown files that live in your repo, and only then does anyone write code. Think of it as code review for the plan, done before the code exists.
+
+This guide is for people who've never touched OpenSpec. You'll learn what it is, the one mental model that makes it click, how to install it, and how to walk your first change from idea to archive. Everything here is based on OpenSpec 1.13, the current release as of September 2026.
+
+## What OpenSpec actually is
+
+[OpenSpec](https://openspec.dev/) is a free, open-source framework for Spec-Driven Development (SDD), built by [Fission AI](https://github.com/Fission-AI/OpenSpec) and released under the MIT license. It comes in two halves, and knowing which is which saves you the most common beginner mix-ups:
+
+- **The \`openspec\` CLI** runs in your terminal. You use it to set up a project, list and validate changes, and check on progress.
+- **The \`/opsx:\` slash commands** run inside your AI assistant's chat. They tell the agent how to explore an idea, write a proposal, build it, and wrap it up.
+
+So setup happens in the terminal, and the real work happens in the chat window. OpenSpec doesn't run a model of its own, either. Your assistant does the thinking, and OpenSpec hands it a structure and a set of instructions to follow.
+
+It works with more than 30 tools, including popular ones like Claude Code, Cursor, GitHub Copilot, Codex, Gemini CLI, and Amazon Q. It's also built for existing codebases, not only greenfield projects, which matters a lot if your day job involves a ten-year-old monolith.
+
+## The mental model: two folders and a merge
+
+Everything that OpenSpec knows lives in an \`openspec/\` folder at the root of your repo. Two subfolders do most of the work:
+
+- **\`specs/\` is the source of truth.** It describes how your system behaves today, grouped by capability (auth, payments, and so on).
+- **\`changes/\` holds proposed work.** Each change gets its own folder with everything you need to review it and build it.
+
+If you know Git, you already get this. \`specs/\` is your main branch, a change is a feature branch, and archiving a change is the merge. On archive, the change's spec edits get folded into \`specs/\`, and the change folder moves to \`changes/archive/\` with a date stamp, so the history sticks around.
+
+Here's the layout with one change in flight:
+
+\`\`\`text
+openspec/
+├── config.yaml                 # project context and rules for the AI
+├── specs/                      # how the system works today
+│   └── auth/spec.md
+└── changes/
+    ├── add-login-rate-limit/
+    │   ├── proposal.md         # why, and what's changing
+    │   ├── specs/auth/spec.md  # the delta: only what changes
+    │   ├── design.md           # the technical approach
+    │   └── tasks.md            # the implementation checklist
+    └── archive/                # finished changes, date-stamped
+\`\`\`
+
+The trick that makes this work on old codebases is the **delta spec**. A change doesn't rewrite your specs. It only lists the requirements being added, modified, removed, or renamed, so you never have to document the whole system up front. Here's one:
+
+\`\`\`text
+## ADDED Requirements
+
+### Requirement: Login rate limiting
+The system SHALL block login attempts from a client after 5 failures in 15 minutes.
+
+#### Scenario: Client exceeds the limit
+- **WHEN** a client makes a 6th login attempt inside that 15-minute window
+- **THEN** the API responds with 429 Too Many Requests
+\`\`\`
+
+That's pretty much the whole syntax the framework has. Requirements say SHALL or MUST, and each one gets at least one \`#### Scenario:\` written as WHEN and THEN. It's plain Markdown, nothing new to learn.
+
+## Installing OpenSpec and setting up your project
+
+You'll need Node.js 20.19.0 or newer. Check with \`node --version\`, then install the CLI globally:
+
+\`\`\`bash
+npm install -g @fission-ai/openspec@latest
+openspec --version
+\`\`\`
+
+On macOS or Linux, \`brew install openspec\` works too. pnpm, yarn, bun, and Nix are also supported if that's more your thing.
+
+Next, go to your project and initialize it:
+
+\`\`\`bash
+cd your-project
+openspec init
+\`\`\`
+
+Init asks which AI tools you use and sets up commands for each one. To skip the prompt, name them directly, for example \`openspec init --tools claude,cursor\`. When it finishes, you'll have the \`openspec/\` folder described above, plus command files for your assistant. With Claude Code, for instance, they land in \`.claude/commands/opsx/\` and \`.claude/skills/\`.
+
+The default setup gives you six slash commands: explore, propose, apply, sync, update, and archive. If they don't show up when you type \`/\` in your assistant, restart it. Lots of tools only scan for new commands at startup.
+
+Here's the step most beginners skip. Open \`openspec/config.yaml\` and tell it about your project. OpenSpec passes this context to the AI whenever it writes planning files, so five lines here save you a lot of correcting later:
+
+\`\`\`yaml
+schema: spec-driven
+context: |
+  Tech stack: Java 21, Spring Boot, PostgreSQL
+  We use conventional commits
+  Every new endpoint needs OpenAPI docs and an integration test
+\`\`\`
+
+One heads-up if you work somewhere security-conscious: OpenSpec collects anonymous usage stats (command names and version only, nothing from your code). You can switch that off with \`openspec config set telemetry.enabled false\` or by setting \`OPENSPEC_TELEMETRY=0\`.
+
+## Your first change, start to finish
+
+Let's walk through a realistic one. Say your login endpoint has no limit on failed attempts, and your security team wants that fixed. Here's the whole loop:
+
+<figure class="not-prose my-8">
+  <svg role="img" aria-labelledby="opsx-flow-title opsx-flow-desc" viewBox="60 -4 430 448" class="mx-auto block h-auto w-full max-w-[480px]">
+    <title id="opsx-flow-title">The OpenSpec change loop</title>
+    <desc id="opsx-flow-desc">A vertical flow. /opsx:explore, which is optional, leads to /opsx:propose, which writes the plan without touching code. That leads to a review step, drawn as the emphasised one. If the plan needs work the review sends it to /opsx:update, which loops back to the review. Once the plan looks right, the flow continues to /opsx:apply and then /opsx:archive.</desc>
+    <defs>
+      <marker id="opsx-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(var(--muted-foreground))" />
+      </marker>
+    </defs>
+    <g fill="hsl(var(--card))" stroke="hsl(var(--border))" stroke-width="1.5">
+      <rect x="90" y="16" width="200" height="44" rx="8" />
+      <rect x="90" y="96" width="200" height="44" rx="8" />
+      <rect x="90" y="296" width="200" height="44" rx="8" />
+      <rect x="90" y="376" width="200" height="44" rx="8" />
+      <rect x="330" y="232" width="140" height="44" rx="8" stroke-dasharray="4 3" />
+    </g>
+    <rect x="90" y="176" width="200" height="44" rx="8" fill="hsl(var(--card))" stroke="hsl(var(--primary))" stroke-width="2" />
+    <g fill="none" stroke="hsl(var(--muted-foreground))" stroke-width="1.5" marker-end="url(#opsx-arrow)">
+      <path d="M190,60 V94" />
+      <path d="M190,140 V174" />
+      <path d="M190,220 V294" />
+      <path d="M190,340 V374" />
+      <path d="M290,198 H430 V230" />
+      <path d="M330,254 H310 V212 H296" />
+    </g>
+    <g fill="hsl(var(--foreground))" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" text-anchor="middle" dominant-baseline="middle">
+      <text x="190" y="38">/opsx:explore</text>
+      <text x="190" y="118">/opsx:propose</text>
+      <text x="190" y="318">/opsx:apply</text>
+      <text x="190" y="398">/opsx:archive</text>
+      <text x="400" y="254">/opsx:update</text>
+    </g>
+    <text x="190" y="198" fill="hsl(var(--foreground))" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="600" text-anchor="middle" dominant-baseline="middle">You review the plan</text>
+    <g fill="hsl(var(--muted-foreground))" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" dominant-baseline="middle">
+      <text x="302" y="38">optional</text>
+      <text x="302" y="118">no code yet</text>
+      <text x="198" y="258">looks right</text>
+      <text x="300" y="186">needs work</text>
+    </g>
+  </svg>
+  <figcaption class="mt-3 text-center text-sm italic text-muted-foreground">Only propose, apply and archive are required. Explore and update are there when you need them.</figcaption>
+</figure>
+
+**1. Explore, if you're unsure.** Type \`/opsx:explore how should we rate-limit login?\` in your assistant's chat. The AI reads your code and talks through options, like a Redis counter versus your API gateway's built-in limits. It doesn't create any files, so there's nothing to clean up if you change your mind.
+
+**2. Propose.** Run \`/opsx:propose add rate limiting to the login endpoint\`. The AI picks a short name like \`add-login-rate-limit\` and creates a folder for it under \`openspec/changes/\`. Inside, you'll find a proposal, a delta spec, a task list, and usually a design doc. Then it stops. It won't touch your code until you tell it to.
+
+**3. Review.** This step pays for everything else, so don't skim it. Read \`proposal.md\` to confirm the scope, then check the scenarios in the delta spec. Is the limit per IP or per account? What does a blocked user actually see? Settling that now costs a minute. Finding out after the code ships costs a sprint. Fix things by editing the files yourself, or run \`/opsx:update\` and tell the AI what to change. Then check the formatting from your terminal:
+
+\`\`\`bash
+openspec validate add-login-rate-limit
+\`\`\`
+
+**4. Apply.** Start a fresh chat so the AI isn't dragging old context around, then run \`/opsx:apply add-login-rate-limit\`. It works through \`tasks.md\` and checks items off as it goes. If it gets cut off halfway, run apply again and it picks up where it stopped.
+
+**5. Archive.** Once the tasks are done and your tests pass, run \`/opsx:archive\`. OpenSpec checks that the tasks are complete, merges the delta into \`openspec/specs/auth/spec.md\`, and moves the change to \`changes/archive/2026-09-24-add-login-rate-limit/\`. Commit that and you're done. The next time anyone, human or AI, touches login, the rate-limit rule is sitting right there in the spec.
+
+## The cheat sheet
+
+This is everything a beginner needs, split by where you type it.
+
+| Command | Where | What it does |
+| --- | --- | --- |
+| \`/opsx:explore\` | AI chat | Thinks an idea through with you. Creates no files. |
+| \`/opsx:propose\` | AI chat | Creates a change with a proposal, delta specs, design, and tasks |
+| \`/opsx:update\` | AI chat | Revises a change's planning files and keeps them consistent |
+| \`/opsx:apply\` | AI chat | Implements the tasks and checks them off |
+| \`/opsx:sync\` | AI chat | Merges delta specs into the main specs without archiving |
+| \`/opsx:archive\` | AI chat | Merges the specs and files the change away as done |
+| \`openspec init\` | Terminal | Sets up OpenSpec in your project |
+| \`openspec list\` | Terminal | Lists active changes (add \`--specs\` to list specs) |
+| \`openspec view\` | Terminal | Shows a dashboard of specs, changes, and task progress |
+| \`openspec show <name>\` | Terminal | Prints a change or a spec |
+| \`openspec validate <name>\` | Terminal | Checks formatting (\`--all\` checks everything) |
+| \`openspec update\` | Terminal | Regenerates the command files after you upgrade |
+| \`openspec config profile\` | Terminal | Switches on the expanded command set |
+
+The slash command spelling depends on your tool. Claude Code uses \`/opsx:propose\`, Cursor and GitHub Copilot use \`/opsx-propose\`, Amazon Q uses \`@opsx-propose\`, and Codex uses \`$openspec-propose\`. When in doubt, type \`/\` in your chat and look at the autocomplete.
+
+The expanded set adds six more commands. Two are worth knowing early: \`/opsx:verify\` checks your code against the spec, and \`/opsx:onboard\` runs a guided tutorial on your own codebase. Pick the profile with \`openspec config profile\`, then run \`openspec update\` in your project to install them.
+
+## Seven beginner mistakes (and how to dodge them)
+
+1. **Typing slash commands into the terminal.** \`/opsx:propose\` goes in your AI chat, and \`openspec\` commands go in the terminal. If nothing happens, you're talking to the wrong half.
+2. **Trying to spec the whole system first.** Don't. Write specs only for what you're about to change. Your first change documents its slice, the next one documents another, and the specs fill in around real work. Back-filled specs for code nobody's touching just go stale.
+3. **Starting too big.** Pick a small, real change for your first run. Not a rewrite, and not a toy project either. You want to learn the loop while the stakes are low.
+4. **Using three hashes for scenarios.** A scenario needs exactly four: \`#### Scenario:\`. With three, the validator skips it and then fails the requirement for having no scenarios, which is a confusing error the first time you see it. Better yet, add \`openspec validate --all --no-interactive\` to CI. It exits with an error code when a spec is malformed, so broken specs never reach main.
+5. **Rubber-stamping the proposal.** If you approve whatever the AI drafts, you've just added paperwork to vibe coding. The review is where all the value is.
+6. **Leaving changes unarchived.** Until you archive, \`specs/\` doesn't reflect what actually shipped. Make archiving part of your definition of done, and commit the whole \`openspec/\` folder. On a regulated team, that archive doubles as a decision log an auditor can actually read.
+7. **Following an outdated tutorial.** Older guides use \`/openspec:proposal\` and a \`project.md\` file. That's the legacy workflow. If you inherit a project set up that way, \`openspec update\` will walk you through migrating it. Run it after every CLI upgrade, too, so your repo's command files don't fall behind.
+
+## Is OpenSpec right for your project?
+
+OpenSpec earns its keep on any change where getting the "what" wrong would be expensive: a new feature, an API change, anything touching auth or money. It shines on existing codebases, since deltas let you start without documenting everything first. For a typo fix or a one-line config bump, it's overkill. Skip the ceremony there. Even the OpenSpec FAQ says so.
+
+How does it stack up against the other spec-driven tools?
+
+- **[Spec Kit](https://github.com/github/spec-kit)** from GitHub is more thorough and more structured. It walks you through fixed phases, from a project "constitution" to implementation, and needs a Python setup. It tends to suit greenfield projects where you want that rigor.
+- **[Kiro](https://kiro.dev)** from AWS builds a requirements, design, and tasks flow into its own IDE. Great if your team already lives there, less so if nobody wants to switch editors.
+- **OpenSpec** is the lightest to adopt and runs inside the assistants you already use. The flip side of having no phase gates is that the review is on you.
+
+## Where to go next
+
+Install the CLI, run \`openspec init\` in a real project, and pick one small change you were going to make anyway. Take it through explore, propose, apply, and archive. That single loop will teach you more than any guide, this one included. When you want more, switch on the expanded profile and try \`/opsx:onboard\`.
+
+Useful links:
+<ul class="not-prose my-6 list-none divide-y divide-border overflow-hidden rounded-lg border border-border p-0"><li><a href="https://openspec.dev/" class="flex flex-col gap-0.5 px-4 py-3 no-underline transition-colors hover:bg-secondary sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"><span class="text-sm font-medium text-foreground">OpenSpec website</span><span class="font-mono text-xs text-muted-foreground">openspec.dev</span></a></li><li><a href="https://github.com/Fission-AI/OpenSpec" class="flex flex-col gap-0.5 px-4 py-3 no-underline transition-colors hover:bg-secondary sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"><span class="text-sm font-medium text-foreground">OpenSpec on GitHub</span><span class="font-mono text-xs text-muted-foreground">Fission-AI/OpenSpec</span></a></li><li><a href="https://github.com/Fission-AI/OpenSpec/blob/main/docs/README.md" class="flex flex-col gap-0.5 px-4 py-3 no-underline transition-colors hover:bg-secondary sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"><span class="text-sm font-medium text-foreground">Official documentation</span><span class="font-mono text-xs text-muted-foreground">docs/README.md</span></a></li><li><a href="https://github.com/Fission-AI/OpenSpec/blob/main/docs/how-commands-work.md" class="flex flex-col gap-0.5 px-4 py-3 no-underline transition-colors hover:bg-secondary sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"><span class="text-sm font-medium text-foreground">How commands work</span><span class="font-mono text-xs text-muted-foreground">docs/how-commands-work.md</span></a></li><li><a href="https://github.com/Fission-AI/OpenSpec/blob/main/docs/existing-projects.md" class="flex flex-col gap-0.5 px-4 py-3 no-underline transition-colors hover:bg-secondary sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"><span class="text-sm font-medium text-foreground">Using OpenSpec in an existing project</span><span class="font-mono text-xs text-muted-foreground">docs/existing-projects.md</span></a></li></ul>`,
+  date: "2026-09-29",
+  readTime: "9 min read",
+  category: "AI",
+  tags: ["OpenSpec", "Spec-Driven Development", "AI Coding", "Claude Code", "Developer Tools", "Agents", "Workflow"],
+},
+{
   id: "fintech-101-problems-you-sign-up-for",
   title: "FinTech 101: The Problems You Sign Up For as a Software Engineer in Finance",
   seoTitle: "FinTech 101: 10 Problems You Sign Up For as an Engineer in Finance",
